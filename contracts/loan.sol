@@ -103,7 +103,7 @@ abstract contract Loan {
         if (paymentIndex == nPayments){
             loanRepaid = true;
         }
-
+        interestTime = block.timestamp;
         principleRepaid += principleDue;
         interestEarned += interestDue;
         latePayments += latePayment;

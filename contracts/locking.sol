@@ -12,8 +12,10 @@ contract LockingContract {
     address public factory;
     uint256 internal lockCounter;
 
-    uint256 internal minLock;
-    uint256 public maxLock;
+    // 2 Weeks
+    uint256 internal minLock = 604800*2;
+    // 2 Years
+    uint256 public maxLock = 31536000*2;
     bool public initialised = false;
 
     mapping(uint256 => uint256) public lockAmounts;

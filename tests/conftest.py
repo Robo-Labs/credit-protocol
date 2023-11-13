@@ -3,34 +3,48 @@ from brownie import config
 from brownie import Contract
 from brownie import interface, project, accounts
 
+
+
+@pytest.fixture
+def loanInfo(borrower, usdc):
+    loan = [borrower, usdc, 10000, 0, [5000, 5000], [99999999, 99999999999], 500, 500 ]
+    yield loan
+
 @pytest.fixture
 def factory_contract():
-    yield  project.CreditProtocol.PoolFactory
+    yield  project.CreditProtocolProject.PoolFactory
+
+@pytest.fixture
+def loan_contract():
+    yield  project.CreditProtocolProject.LendingPool
 
 @pytest.fixture
 def token_contract():
-    yield  project.CreditProtocol.Token
+    yield  project.CreditProtocolProject.Token
 
 @pytest.fixture
 def lock_contract():
-    yield  project.CreditProtocol.LockingContract
+    yield  project.CreditProtocolProject.LockingContract
 
 @pytest.fixture
 def factory(factory_contract, gov):
-    factory = factory_contract.deploy({'from' : gov})
+    factory = factory_contract.deploy(gov, {'from' : gov})
+    yield factory
 
 @pytest.fixture
 def token(token_contract, gov, backer):
     token = token_contract.deploy("test", "tst", gov, {'from' : gov})
     token.mint(backer, 10000, {'from' : gov})
+    yield token
     
 
 @pytest.fixture
 def locker(lock_contract, gov, factory, token, backer):
     locker = lock_contract.deploy(gov, {'from' : gov})
     locker.initialise(factory, token, {'from' : gov})
-    token.approve(locker, 10000, {'from' : locker})
-    locker.lockTokens(10000, 10000, {'from' : locker})
+    factory.setLockingContract(locker, {'from' : gov})
+
+    yield locker
     
 
 @pytest.fixture

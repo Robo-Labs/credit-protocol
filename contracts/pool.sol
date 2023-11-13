@@ -19,7 +19,7 @@ contract LendingPool is ERC721, Loan {
 
         ) 
         ERC721(_name, _symbol) public {
-            
+            interestTime = block.timestamp;
         }
     
     uint256 public tokenId;
