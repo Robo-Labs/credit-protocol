@@ -22,20 +22,24 @@ abstract contract Loan {
 
     bool public loanRepaid = false;
     bool public depositsOpen = true;
+    bool public defaulted = false; 
 
     uint256 public rateSharingLenders;
     // % of borrowed amount paid to backers 
     uint256 public finderFee;
     // % fee on principal repaid early (i.e. if decides to repay full loan before expiry)
-    uint256 public earlyRepayFee; 
+    uint256 public minInterest; 
     // % additional rate on principal repaid late 
     uint256 public latePaymentRate; 
 
     uint256 public paymentIndex = 0;
     uint256 public nPayments;
-    uint256[] public interestSchedule;
     uint256[] public principleSchedule;
     uint256[] public paymentDeadline;
+
+    uint256 public interestRate;
+    // For tracking timestamp interest accumulates from 
+    uint256 public interestTime;
 
     address public management;
     address public keeper;
@@ -56,22 +60,42 @@ abstract contract Loan {
         // TO DO THIS SHOULD SLASH BACKERS 
     }
 
+    function calcInterstDue() public returns (uint256) { 
+        uint256 totalOwed = totalLent - principleRepaid;
+        return((totalOwed * interestRate / decimalAdj) * (block.timestamp - interestTime) / secondsPerYear );
+    }
+
+    function calcTotalDue() public returns(uint256) {
+        uint256 interestDue = calcInterstDue();
+        uint256 principalDue = totalLent - principleRepaid;
+        uint256 latePayment = 0;
+        uint256 time = 2**256 - 1;
+        uint256 timeNow = block.timestamp;
+        uint256 i = paymentIndex;
+        while ((time > timeNow) && (i < nPayments)) {
+            time = paymentDeadline[i];
+            latePayment += (principleSchedule[i] * totalLent / borrowLimit * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
+            i += 1;
+        }
+
+        return (interestDue + principalDue + latePayment);
+    }
 
     // for borrower to make next scheduled repayment  
-    function repay() external {
+    function repayNext() external {
         require(!loanRepaid);
         if (depositsOpen){
             depositsOpen = false;
         }
         uint256 principleDue = principleSchedule[paymentIndex]* totalLent / borrowLimit; 
-        uint256 interestDue = interestSchedule[paymentIndex]* totalLent / borrowLimit; 
+        uint256 interestDue = calcInterstDue();
         uint256 totalDue = principleDue + interestDue;
 
         uint256 deadline = paymentDeadline[paymentIndex];
         uint256 latePayment = 0;
 
         if (block.timestamp > deadline){
-            latePayment = totalDue*((block.timestamp - deadline) / secondsPerYear) * (latePaymentRate / decimalAdj);
+            latePayment = (principleDue*(block.timestamp - deadline) / secondsPerYear)* latePaymentRate / decimalAdj;
         }
 
         token.transferFrom(msg.sender, address(this) , totalDue + latePayment);
@@ -90,14 +114,13 @@ abstract contract Loan {
         if (depositsOpen){
             depositsOpen = false;
         }
-
-        uint256 amount = _amount;
+        uint256 interestDue = calcInterstDue(); 
+        require(_amount >= interestDue);
+        uint256 amount = _amount - interestDue;
 
         while ((amount > 0) && (paymentIndex < nPayments)) {
             uint256 principleDue = principleSchedule[paymentIndex]* totalLent / borrowLimit; 
-            uint256 interestDue = interestSchedule[paymentIndex]* totalLent / borrowLimit; 
-            uint256 totalDue = principleDue + interestDue;
-
+            uint256 totalDue = principleDue;
             uint256 deadline = paymentDeadline[paymentIndex];
             uint256 latePayment = 0;
 
@@ -108,16 +131,12 @@ abstract contract Loan {
             if (amount >= (totalDue + latePayment)) {
                 paymentIndex += 1;
                 principleRepaid += principleDue;
-                interestEarned += interestDue;
                 latePayments += latePayment;
                 amount -= (totalDue + latePayment);
             } else {
                 uint256 principleAdj = principleSchedule[paymentIndex]* amount / totalDue;
-                uint256 interestAdj = interestSchedule[paymentIndex]* amount / totalDue;
                 principleSchedule[paymentIndex] -= principleAdj;
-                interestSchedule[paymentIndex] -= interestAdj;
                 principleRepaid += principleAdj;
-                interestEarned += interestAdj;
                 latePayments += latePayment*amount / totalDue;
                 amount = 0;                
             }

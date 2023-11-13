@@ -8,7 +8,16 @@ contract LendingPool is ERC721, Loan {
 
     constructor(
         string memory _name, 
-        string memory _symbol) 
+        string memory _symbol,
+        address borrower,
+        address token, 
+        uint256 maxLoan, 
+        uint256[] memory paymentSchedule,
+        uint256[] memory paymentDeadline,
+        uint256 interestRate,
+        uint256 lateFee
+
+        ) 
         ERC721(_name, _symbol) public {
             
         }
