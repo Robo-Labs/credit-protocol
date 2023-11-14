@@ -25,10 +25,11 @@ contract PoolFactory {
         uint256[] _paymentDeadline;
         uint256 _interestRate;
         uint256 _lateFee;
+        uint256 _nPayments;
 
     }
 
-    constructor(address _gov) public {
+    constructor(address _gov)  {
         governance = _gov;
     }
 
@@ -53,9 +54,22 @@ contract PoolFactory {
         lockingContract = _locker;
     }
 
+    // Function to check if newly proposed loan is valid 
+    function _isValidLoan(loanInfo memory _loan) internal returns(bool) {
+        uint256 totalPayments = 0;
+        uint256 n = _loan._nPayments;
+
+        for (uint i = 0; i < n; i++) {
+            totalPayments += _loan._principleSchedule[i];
+            
+        }
+        require(_loan._paymentDeadline[n - 1] > block.timestamp);
+        require(_loan._amountBacked == 0);
+    }
+
     // function to propose loan terms 
     function proposeLoan(loanInfo memory _loan) external {
-        _loan._amountBacked = 0;
+        require(_isValidLoan(_loan));
         loanLookup[loanCounter] = _loan;
         loanCounter += 1;
     }
@@ -65,7 +79,6 @@ contract PoolFactory {
         require(_loanNumber < loanCounter);
         require(!loanApproved[_loanNumber]);
         ILock(lockingContract).backLoan(_amount, _loanNumber, msg.sender);
-        //TO DO LOCK 
         backedLoans[_loanNumber][msg.sender] += _amount;
         loanLookup[_loanNumber]._amountBacked += _amount;
     }
@@ -73,7 +86,6 @@ contract PoolFactory {
     function unBackLoan(uint256 _amount, uint256 _loanNumber) external {
         require(_loanNumber < loanCounter);
         require(!loanApproved[_loanNumber]);
-        //TO DO LOCK 
         backedLoans[_loanNumber][msg.sender] -= _amount;
         loanLookup[_loanNumber]._amountBacked -= _amount;
     }
@@ -83,7 +95,7 @@ contract PoolFactory {
         require(!loanApproved[_loanNumber]);
         loanApproved[_loanNumber] = true;
         loanInfo storage loan = loanLookup[_loanNumber];
-        address newPool = address(new LendingPool("test", "test", loan._borrower, loan._token, loan._maxLoan, loan._principleSchedule, loan._principleSchedule, loan._interestRate, loan._lateFee));
+        address newPool = address(new LendingPool("test", "test", loan._borrower, loan._token, loan._maxLoan, loan._principleSchedule, loan._principleSchedule, loan._interestRate, loan._lateFee, loan._nPayments));
         loanAddress[_loanNumber] = newPool;
         isLoan[newPool] = true;
     }

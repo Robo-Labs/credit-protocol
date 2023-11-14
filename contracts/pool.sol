@@ -9,17 +9,30 @@ contract LendingPool is ERC721, Loan {
     constructor(
         string memory _name, 
         string memory _symbol,
-        address borrower,
-        address token, 
-        uint256 maxLoan, 
-        uint256[] memory paymentSchedule,
-        uint256[] memory paymentDeadline,
-        uint256 interestRate,
-        uint256 lateFee
+        address _borrower,
+        address _token, 
+        uint256 _borrowLimit, 
+        uint256[] memory _principleSchedule,
+        uint256[] memory _paymentDeadline,
+        uint256 _interestRate,
+        uint256 _latePaymentRate,
+        uint256 _nPayments
 
         ) 
         ERC721(_name, _symbol) public {
             interestTime = block.timestamp;
+            //uint256 n = _principleSchedule.length(); 
+            borrower = _borrower; 
+            token = IERC20(_token);
+            borrowLimit = borrowLimit;
+            principleSchedule = principleSchedule;
+            paymentDeadline = _paymentDeadline;
+            interestRate = _interestRate;
+            latePaymentRate = _latePaymentRate;
+            //uint256 _nPayments = principleSchedule.length();
+            finalPaymentTime = _principleSchedule[_nPayments-1];
+
+
         }
     
     uint256 public tokenId;

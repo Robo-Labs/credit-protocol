@@ -32,6 +32,8 @@ abstract contract Loan {
     // % additional rate on principal repaid late 
     uint256 public latePaymentRate; 
 
+    uint256 public finalPaymentTime;
+
     uint256 public paymentIndex = 0;
     uint256 public nPayments;
     uint256[] public principleSchedule;
@@ -48,15 +50,24 @@ abstract contract Loan {
     uint256 public borrowLimit;
     uint256 public totalLent = 0;
     uint256 public principleRepaid = 0;
+    uint256 public principleWithdrawn = 0;
     uint256 public interestEarned = 0;
     uint256 public latePayments = 0;
 
     function hasDefaulted() public returns (bool) {
+        if (defaulted){
+            return defaulted;
+        }
 
+        if (principleRepaid < totalLent){
+            return(block.timestamp > finalPaymentTime);
+        } else {
+            return(false);
+        }
     }
 
-    function triggerDefault() external virtual {
-        require(hasDefaulted() == true);
+    function triggerDefault() external {
+        require(hasDefaulted());
         // TO DO THIS SHOULD SLASH BACKERS 
     }
 
@@ -81,6 +92,18 @@ abstract contract Loan {
         return (interestDue + principalDue + latePayment);
     }
 
+    function closeLoan() external onlyBorrower {
+        require(depositsOpen);
+        depositsOpen = false;
+    }
+
+    function withdrawLentFunds() external onlyBorrower {
+        uint256 _amountFree = totalLent - principleWithdrawn;
+        token.transfer(borrower, _amountFree);
+        principleWithdrawn += _amountFree;
+    }
+
+
     // for borrower to make next scheduled repayment  
     function repayNext() external {
         require(!loanRepaid);
@@ -100,8 +123,12 @@ abstract contract Loan {
 
         token.transferFrom(msg.sender, address(this) , totalDue + latePayment);
         paymentIndex += 1;
+        // Check if payment is final payment!
         if (paymentIndex == nPayments){
             loanRepaid = true;
+            if (block.timestamp > finalPaymentTime) {
+                defaulted = true;
+            }
         }
         interestTime = block.timestamp;
         principleRepaid += principleDue;

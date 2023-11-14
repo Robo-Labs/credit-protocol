@@ -18,3 +18,5 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
 
     token.approve(loan, 10000, {'from' : lender})
     loan.deposit(10000, {'from' : lender})
+
+    loan.withdrawLentFunds({'from' : borrower})

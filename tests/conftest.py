@@ -7,7 +7,7 @@ from brownie import interface, project, accounts
 
 @pytest.fixture
 def loanInfo(borrower, usdc):
-    loan = [borrower, usdc, 10000, 0, [5000, 5000], [99999999, 99999999999], 500, 500 ]
+    loan = [borrower, usdc, 10000, 0, [5000, 5000], [1699974055 + 604800*10, 1699974055 + 604800*20], 500, 500, 2 ]
     yield loan
 
 @pytest.fixture
