@@ -3,11 +3,13 @@ from brownie import config
 from brownie import Contract
 from brownie import interface, project, accounts
 
-
+@pytest.fixture
+def amount():
+    yield 10000
 
 @pytest.fixture
-def loanInfo(borrower, usdc):
-    loan = [borrower, usdc, 10000, 0, [5000, 5000], [1699974055 + 604800*10, 1699974055 + 604800*20], 500, 500, 2 ]
+def loanInfo(borrower, usdc, amount):
+    loan = [borrower, usdc, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 500, 500, 2 ]
     yield loan
 
 @pytest.fixture
@@ -38,6 +40,7 @@ def token(token_contract, gov, backer):
     yield token
     
 
+
 @pytest.fixture
 def locker(lock_contract, gov, factory, token, backer):
     locker = lock_contract.deploy(gov, {'from' : gov})
@@ -52,11 +55,15 @@ def gov(accounts):
     yield accounts[1]
 
 @pytest.fixture
-def lender(accounts):
+def lender(accounts, usdc, whale, amount):
+    usdc.transfer(accounts[0], amount, {'from' : whale} )
+
     yield accounts[0]
 
 @pytest.fixture
-def borrower(accounts):
+def borrower(accounts, usdc, whale, amount):
+    usdc.transfer(accounts[0], amount*2, {'from' : whale} )
+
     yield accounts[2]
 
 @pytest.fixture
@@ -65,9 +72,14 @@ def backer(accounts):
 
 @pytest.fixture
 def whale(accounts):
-    yield accounts.at("0x7601630eC802952ba1ED2B6e4db16F699A0a5A87")
+    yield accounts.at("0xcEe284F754E854890e311e3280b767F80797180d", force=True)
 
 @pytest.fixture
 def usdc():
     yield interface.IERC20("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")    
 
+# Function scoped isolation fixture to enable xdist.
+# Snapshots the chain before each test and reverts after test completion.
+@pytest.fixture(scope="function", autouse=True)
+def shared_setup(fn_isolation):
+    pass

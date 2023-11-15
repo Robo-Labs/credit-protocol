@@ -4,6 +4,15 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Loan} from "contracts/loan.sol";
 
+interface ILock {
+    function onDefault(uint256 _loanNumber) external;
+    function onRepaidLoan(uint256 _loanNumber) external; 
+}
+
+interface IFactory {
+    function loanAddress(address _loan) external view returns(uint256);
+}
+
 contract LendingPool is ERC721, Loan {
 
     constructor(
@@ -24,18 +33,32 @@ contract LendingPool is ERC721, Loan {
             //uint256 n = _principleSchedule.length(); 
             borrower = _borrower; 
             token = IERC20(_token);
-            borrowLimit = borrowLimit;
-            principleSchedule = principleSchedule;
+            borrowLimit = _borrowLimit;
+            principleSchedule = _principleSchedule;
             paymentDeadline = _paymentDeadline;
             interestRate = _interestRate;
             latePaymentRate = _latePaymentRate;
             //uint256 _nPayments = principleSchedule.length();
-            finalPaymentTime = _principleSchedule[_nPayments-1];
+            nPayments = _nPayments;
+            finalPaymentTime = _paymentDeadline[_nPayments-1];
 
 
         }
-    
+
+    modifier onlyLender() {
+        require((msg.sender == keeper) || isLender(msg.sender));
+        _;
+
+    }
+    function isLender(address _lender) public view returns(bool) {
+        return(balanceOf(_lender) > 0 );
+    }
+
     uint256 public tokenId;
+    uint256 public loanNumber;
+    address public keeper;
+    address public locker;
+    address public factory;
     // Tracking deposits & withdrawals by 
     mapping(uint256 => uint256) public deposits;
     mapping(uint256 => uint256) public withdrawals;
@@ -65,6 +88,22 @@ contract LendingPool is ERC721, Loan {
 
     }
 
+    function repayNext() external {
+        _repayNext(msg.sender);
+        if ((paymentIndex == nPayments) && !loanFinal) {
+            /// Loan to be finalised either trigger default or unbacking of loan 
+            if(hasDefaulted()){
+                defaulted = true;
+                loanFinal = true;
+                ILock(locker).onDefault(loanNumber);
+            } else {
+                defaulted = false;
+                loanFinal = true;
+                ILock(locker).onRepaidLoan(loanNumber);           
+            }
+        }
+    }
+
     function withdraw(uint256 _tokenId) external {
         require(!depositsOpen);
         require(ownerOf(_tokenId) == msg.sender);
@@ -73,6 +112,13 @@ contract LendingPool is ERC721, Loan {
         withdrawals[_tokenId] += amount;
     }
 
+    function triggerDefault() external {
+        require(hasDefaulted());
+        require(!loanFinal);
+        defaulted = true;
+        loanFinal = true;
+        ILock(locker).onDefault(loanNumber);
+    }
 
     function claimDefaultBonus(uint256 _tokenId) external {
         require(hasDefaulted());

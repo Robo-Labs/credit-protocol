@@ -55,21 +55,25 @@ contract PoolFactory {
     }
 
     // Function to check if newly proposed loan is valid 
-    function _isValidLoan(loanInfo memory _loan) internal returns(bool) {
+    function isValidLoan(loanInfo memory _loan) public returns(bool) {
         uint256 totalPayments = 0;
         uint256 n = _loan._nPayments;
-
+        uint256 t = 0;
         for (uint i = 0; i < n; i++) {
             totalPayments += _loan._principleSchedule[i];
-            
+            require(_loan._paymentDeadline[i] >= t, "Repayments Unorderded");
+            require(_loan._paymentDeadline[i] >= block.timestamp, "Repayment Date Too Late");
+
+            t = _loan._paymentDeadline[i];
         }
-        require(_loan._paymentDeadline[n - 1] > block.timestamp);
-        require(_loan._amountBacked == 0);
+        require(_loan._amountBacked == 0, "Amount Backed != 0");
+        require(totalPayments == _loan._maxLoan, "Principal Unmatched");
+        return true;
     }
 
     // function to propose loan terms 
     function proposeLoan(loanInfo memory _loan) external {
-        require(_isValidLoan(_loan));
+        require(isValidLoan(_loan));
         loanLookup[loanCounter] = _loan;
         loanCounter += 1;
     }
@@ -95,7 +99,7 @@ contract PoolFactory {
         require(!loanApproved[_loanNumber]);
         loanApproved[_loanNumber] = true;
         loanInfo storage loan = loanLookup[_loanNumber];
-        address newPool = address(new LendingPool("test", "test", loan._borrower, loan._token, loan._maxLoan, loan._principleSchedule, loan._principleSchedule, loan._interestRate, loan._lateFee, loan._nPayments));
+        address newPool = address(new LendingPool("test", "test", loan._borrower, loan._token, loan._maxLoan, loan._principleSchedule, loan._paymentDeadline, loan._interestRate, loan._lateFee, loan._nPayments));
         loanAddress[_loanNumber] = newPool;
         isLoan[newPool] = true;
     }

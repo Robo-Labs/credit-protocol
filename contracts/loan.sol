@@ -20,6 +20,7 @@ abstract contract Loan {
     uint256 constant secondsPerYear = 31536000;
     uint256 constant decimalAdj = 10000;
 
+    bool public loanFinal = false;
     bool public loanRepaid = false;
     bool public depositsOpen = true;
     bool public defaulted = false; 
@@ -54,7 +55,7 @@ abstract contract Loan {
     uint256 public interestEarned = 0;
     uint256 public latePayments = 0;
 
-    function hasDefaulted() public returns (bool) {
+    function hasDefaulted() public view returns (bool) {
         if (defaulted){
             return defaulted;
         }
@@ -71,12 +72,12 @@ abstract contract Loan {
         // TO DO THIS SHOULD SLASH BACKERS 
     }
 
-    function calcInterstDue() public returns (uint256) { 
+    function calcInterstDue() public view returns (uint256) { 
         uint256 totalOwed = totalLent - principleRepaid;
         return((totalOwed * interestRate / decimalAdj) * (block.timestamp - interestTime) / secondsPerYear );
     }
 
-    function calcTotalDue() public returns(uint256) {
+    function calcTotalDue() public view returns(uint256) {
         uint256 interestDue = calcInterstDue();
         uint256 principalDue = totalLent - principleRepaid;
         uint256 latePayment = 0;
@@ -105,7 +106,7 @@ abstract contract Loan {
 
 
     // for borrower to make next scheduled repayment  
-    function repayNext() external {
+    function _repayNext(address _from) internal {
         require(!loanRepaid);
         if (depositsOpen){
             depositsOpen = false;
@@ -121,7 +122,7 @@ abstract contract Loan {
             latePayment = (principleDue*(block.timestamp - deadline) / secondsPerYear)* latePaymentRate / decimalAdj;
         }
 
-        token.transferFrom(msg.sender, address(this) , totalDue + latePayment);
+        token.transferFrom(_from, address(this) , totalDue + latePayment);
         paymentIndex += 1;
         // Check if payment is final payment!
         if (paymentIndex == nPayments){
@@ -136,42 +137,7 @@ abstract contract Loan {
         latePayments += latePayment;
     }
 
-    function repayPartial(uint256 _amount) external {
-        require(!loanRepaid);
-        if (depositsOpen){
-            depositsOpen = false;
-        }
-        uint256 interestDue = calcInterstDue(); 
-        require(_amount >= interestDue);
-        uint256 amount = _amount - interestDue;
 
-        while ((amount > 0) && (paymentIndex < nPayments)) {
-            uint256 principleDue = principleSchedule[paymentIndex]* totalLent / borrowLimit; 
-            uint256 totalDue = principleDue;
-            uint256 deadline = paymentDeadline[paymentIndex];
-            uint256 latePayment = 0;
-
-            if (block.timestamp > deadline){
-                latePayment = totalDue*((block.timestamp - deadline) / secondsPerYear) * (latePaymentRate / decimalAdj);
-            }
-
-            if (amount >= (totalDue + latePayment)) {
-                paymentIndex += 1;
-                principleRepaid += principleDue;
-                latePayments += latePayment;
-                amount -= (totalDue + latePayment);
-            } else {
-                uint256 principleAdj = principleSchedule[paymentIndex]* amount / totalDue;
-                principleSchedule[paymentIndex] -= principleAdj;
-                principleRepaid += principleAdj;
-                latePayments += latePayment*amount / totalDue;
-                amount = 0;                
-            }
-
-
-        }
-
-    }
 
 
 }
