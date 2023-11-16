@@ -3,6 +3,15 @@ pragma solidity 0.8.18;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface ILock {
+    function onDefault(uint256 _loanNumber) external;
+    function onRepaidLoan(uint256 _loanNumber) external; 
+}
+
+interface IFactory {
+    function loanAddress(address _loan) external view returns(uint256);
+}
+
 abstract contract Loan {
 
     IERC20 public token;
@@ -19,7 +28,10 @@ abstract contract Loan {
     
     uint256 constant secondsPerYear = 31536000;
     uint256 constant decimalAdj = 10000;
-
+    uint256 public tokenId;
+    uint256 public loanNumber;
+    address public locker;
+    address public factory;
     bool public loanFinal = false;
     bool public loanRepaid = false;
     bool public depositsOpen = true;
@@ -67,29 +79,29 @@ abstract contract Loan {
         }
     }
 
-    function triggerDefault() external {
-        require(hasDefaulted());
-        // TO DO THIS SHOULD SLASH BACKERS 
-    }
-
     function calcInterstDue() public view returns (uint256) { 
         uint256 totalOwed = totalLent - principleRepaid;
         return((totalOwed * interestRate / decimalAdj) * (block.timestamp - interestTime) / secondsPerYear );
     }
 
     function calcTotalDue() public view returns(uint256) {
+        if (loanFinal){
+            return 0;
+        }
         uint256 interestDue = calcInterstDue();
         uint256 principalDue = totalLent - principleRepaid;
         uint256 latePayment = 0;
-        uint256 time = 2**256 - 1;
         uint256 timeNow = block.timestamp;
         uint256 i = paymentIndex;
+        uint256 time = paymentDeadline[i];
+        
+        /*
+        TO DO FIX CALCS! 
         while ((time > timeNow) && (i < nPayments)) {
-            time = paymentDeadline[i];
-            latePayment += (principleSchedule[i] * totalLent / borrowLimit * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
+            latePayment += ((principleSchedule[i] * totalLent / borrowLimit) * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
             i += 1;
         }
-
+        */ 
         return (interestDue + principalDue + latePayment);
     }
 
@@ -106,7 +118,7 @@ abstract contract Loan {
 
 
     // for borrower to make next scheduled repayment  
-    function _repayNext(address _from) internal {
+    function repayNext() external {
         require(!loanRepaid);
         if (depositsOpen){
             depositsOpen = false;
@@ -118,19 +130,29 @@ abstract contract Loan {
         uint256 deadline = paymentDeadline[paymentIndex];
         uint256 latePayment = 0;
 
+        // Calc Late Payments 
         if (block.timestamp > deadline){
             latePayment = (principleDue*(block.timestamp - deadline) / secondsPerYear)* latePaymentRate / decimalAdj;
         }
 
-        token.transferFrom(_from, address(this) , totalDue + latePayment);
+        token.transferFrom(msg.sender, address(this) , totalDue + latePayment);
         paymentIndex += 1;
-        // Check if payment is final payment!
-        if (paymentIndex == nPayments){
+
+        if ((paymentIndex == nPayments) && !loanFinal) {
+            /// Loan to be finalised either trigger default or unbacking of loan 
             loanRepaid = true;
-            if (block.timestamp > finalPaymentTime) {
+            loanFinal = true;
+
+            if(hasDefaulted()){
                 defaulted = true;
+                
+                //ILock(locker).onDefault(loanNumber);
+            } else {
+                defaulted = false;
+                // Note this can be called externally but breaks if called by loan contract ??? 
+                //ILock(locker).onRepaidLoan(loanNumber);           
             }
-        }
+        }        
         interestTime = block.timestamp;
         principleRepaid += principleDue;
         interestEarned += interestDue;

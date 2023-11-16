@@ -28,17 +28,19 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
     chain.sleep(1000)
     chain.mine(10)
 
-    amtOwed = loan.calcTotalDue()
+
     usdc.approve(loan, amtOwed * 2, {'from' : borrower})
     nPayments = len(loanInfo[4])
     for i in range(nPayments):
-        loan.repayNext({'from' : borrower})
+        tx = loan.repayNext({'from' : borrower})
+        assert (loan.principleRepaid() + loan.interestEarned() + loan.latePayments()) == borrowerBal + amount - usdc.balanceOf(borrower)
 
+    assert loan.loanFinal()
     amtOwed = loan.calcTotalDue()
     assert amtOwed == 0
     loan.withdraw(0, {'from' : lender})
     assert usdc.balanceOf(lender) >= lenderBal
-
+    assert False
 
 
 

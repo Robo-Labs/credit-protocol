@@ -9,10 +9,6 @@ interface ILock {
     function onRepaidLoan(uint256 _loanNumber) external; 
 }
 
-interface IFactory {
-    function loanAddress(address _loan) external view returns(uint256);
-}
-
 contract LendingPool is ERC721, Loan {
 
     constructor(
@@ -54,11 +50,7 @@ contract LendingPool is ERC721, Loan {
         return(balanceOf(_lender) > 0 );
     }
 
-    uint256 public tokenId;
-    uint256 public loanNumber;
-    address public keeper;
-    address public locker;
-    address public factory;
+
     // Tracking deposits & withdrawals by 
     mapping(uint256 => uint256) public deposits;
     mapping(uint256 => uint256) public withdrawals;
@@ -86,22 +78,6 @@ contract LendingPool is ERC721, Loan {
         tokenId += 1;
         totalLent += _amount;
 
-    }
-
-    function repayNext() external {
-        _repayNext(msg.sender);
-        if ((paymentIndex == nPayments) && !loanFinal) {
-            /// Loan to be finalised either trigger default or unbacking of loan 
-            if(hasDefaulted()){
-                defaulted = true;
-                loanFinal = true;
-                ILock(locker).onDefault(loanNumber);
-            } else {
-                defaulted = false;
-                loanFinal = true;
-                ILock(locker).onRepaidLoan(loanNumber);           
-            }
-        }
     }
 
     function withdraw(uint256 _tokenId) external {

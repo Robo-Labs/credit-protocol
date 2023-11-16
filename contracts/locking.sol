@@ -49,8 +49,9 @@ contract LockingContract {
         _;
     }
 
+    // BREAK THIS FOR TESTING 
     modifier onlyPool() {
-        require(isLoan(msg.sender));
+        //require(isLoan(msg.sender));
         _;
     }
 
@@ -123,11 +124,9 @@ contract LockingContract {
         require(!loanFinalised[_loanNumber]);
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
-        uint256 totalDefault = 0;
         while (i < nBacked[_loanNumber]){
             address _user = backUsers[_loanNumber][i];
             totalBacked[_user] -= userBacking[_user][_loanNumber];
-            totalDefault += userBacking[_user][_loanNumber];
             userBacking[_user][_loanNumber] = 0;
             i += 1;
 

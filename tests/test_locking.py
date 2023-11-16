@@ -3,7 +3,7 @@ from brownie import Contract, interface, accounts, project, chain
 import pytest
 
 
-def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lender, loan_contract, loanInfo, amount) : 
+def test_lock(accounts, usdc, factory, locker, token, borrower, backer, lender, loan_contract, loanInfo, amount) : 
     factory.proposeLoan(loanInfo , {'from' : borrower})
     # TO DO - Back Loan 
     chain.mine(1)
