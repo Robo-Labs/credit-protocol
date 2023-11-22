@@ -29,6 +29,16 @@ def lock_contract():
     yield  project.CreditProtocolProject.LockingContract
 
 @pytest.fixture
+def market_contract():
+    yield  project.CreditProtocolProject.Market
+
+
+@pytest.fixture
+def market(market_contract, factory,  gov ):
+    market = market_contract.deploy(factory, 100, gov, {'from' : gov})
+    yield market
+
+@pytest.fixture
 def factory(factory_contract, gov):
     factory = factory_contract.deploy(gov, {'from' : gov})
     yield factory
@@ -69,6 +79,11 @@ def borrower(accounts, usdc, whale, amount):
 @pytest.fixture
 def backer(accounts):
     yield accounts[3]
+
+@pytest.fixture
+def bidder(accounts):
+    yield accounts[4]
+
 
 @pytest.fixture
 def whale(accounts):

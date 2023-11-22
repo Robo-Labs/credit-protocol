@@ -3,7 +3,7 @@ from brownie import Contract, interface, accounts, project, chain
 import pytest
 
 
-def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lender, loan_contract, loanInfo, amount) : 
+def test_ask(accounts, usdc, market, factory, locker, token, bidder, whale, borrower, backer, lender, loan_contract, loanInfo, amount) : 
     factory.proposeLoan(loanInfo , {'from' : borrower})
     # TO DO - Back Loan 
     chain.mine(1)
@@ -29,18 +29,17 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
     chain.mine(10)
 
 
-    usdc.approve(loan, amtOwed * 2, {'from' : borrower})
-    nPayments = len(loanInfo[4])
-    for i in range(nPayments):
-        tx = loan.repayNext({'from' : borrower})
-        assert (loan.principleRepaid() + loan.interestEarned() + loan.latePayments()) == borrowerBal + amount - usdc.balanceOf(borrower)
+    usdc.transfer(bidder, amount*2, {'from' : whale} )
+    usdc.approve(market, amount, {'from' : bidder})
 
-    assert loan.loanFinal()
-    amtOwed = loan.calcTotalDue()
-    assert amtOwed == 0
-    loan.withdraw(0, {'from' : lender})
-    assert usdc.balanceOf(lender) >= lenderBal
+    bidderBal = usdc.balanceOf(bidder)
+    loan.approve(market, 0, {'from' : lender})
 
+    market.placeAsk(10000, amount, usdc, loan, 0, {'from' : lender})
+    lenderBal = usdc.balanceOf(lender)
+    market.matchAsk(0, amount, {'from' : bidder})
 
+    assert usdc.balanceOf(bidder) == bidderBal - amount
+    assert usdc.balanceOf(lender) == lenderBal + amount
+    assert loan.ownerOf(0) == bidder
 
-    

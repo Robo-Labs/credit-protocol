@@ -116,15 +116,15 @@ contract Market {
             */
 
             ILoan(bid.loan).fractionalize(_tokenId, newPrinciple, newWithdraws);
-            ILoan(bid.loan).transfer(bid.user, ILoan(bid.loan).tokenId() - 1);
-            ILoan(bid.loan).transfer(msg.sender, ILoan(bid.loan).tokenId());
+            //ILoan(bid.loan).transferFrom(address(this), bid.user, ILoan(bid.loan).tokenId() - 1);
+            ILoan(bid.loan).transferFrom(address(this), msg.sender, ILoan(bid.loan).tokenId());
         } else {
-            ILoan(bid.loan).transfer(bid.user, _tokenId);
+            ILoan(bid.loan).transferFrom(address(this), bid.user, _tokenId);
         }
 
 
 
-        token.transfer(bid.user, total );
+        token.transfer(msg.sender, total );
         orders[_bidNumber].amount = orders[_bidNumber].amount - _amount;
 
     }
@@ -173,13 +173,13 @@ contract Market {
 
 
             ILoan(ask.loan).fractionalize(_tokenId, newPrinciple, newWithdraws);
-            ILoan(ask.loan).transfer(msg.sender, ILoan(ask.loan).tokenId() - 1);
+            ILoan(ask.loan).transferFrom(address(this), msg.sender, ILoan(ask.loan).tokenId() - 1);
             //loan.transfer(ask.user, loan.tokenId());
         } else {
-            ILoan(ask.loan).transfer(msg.sender, _tokenId);
+            ILoan(ask.loan).transferFrom(address(this), msg.sender, _tokenId);
         }
 
-        token.transferFrom(ask.user, ask.user, total);
+        //token.transferFrom(ask.user, ask.user, total);
         orders[_askNumber].amount = orders[_askNumber].amount - _amount;
 
 
