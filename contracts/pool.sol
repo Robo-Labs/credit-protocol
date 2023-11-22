@@ -67,6 +67,29 @@ contract LendingPool is ERC721, Loan {
 
     }
 
+    // used to fractionalize NFT's to different amounts 
+    function fractionalize(uint256 _tokenIn, uint256[] memory _principleWithdrawn, uint256[] memory _amountLent) external {
+        require(msg.sender ==  ownerOf(_tokenIn));
+        uint256 principleWithdrawn = withdrawals[_tokenIn];
+        uint256 amountLent = deposits[_tokenIn];
+        uint256 n = _principleWithdrawn.length;
+        require(_amountLent.length == n);
+        uint256 principleWithdrawnCheck = 0;
+        uint256 amountLentCheck = 0;
+        for (uint i = 0; i<n; i ++) {
+            principleWithdrawnCheck += _principleWithdrawn[i];
+            amountLentCheck += _amountLent[i];
+        }
+        require((principleWithdrawnCheck == principleWithdrawn) && (amountLentCheck == amountLent));
+        _burn(_tokenIn);
+        for (uint i = 0; i<n; i ++) {
+            _mint(msg.sender, tokenId);
+            deposits[tokenId] = _amountLent[i];
+            withdrawals[tokenId] = _principleWithdrawn[i];
+            tokenId += 1;
+        }        
+    }
+
     // for users to provide liquidity 
     function deposit(uint256 _amount) external {
         require((_amount + totalLent) <= borrowLimit);
