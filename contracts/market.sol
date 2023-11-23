@@ -11,7 +11,7 @@ interface IFactory {
 interface ILoan {
     function token() external view returns(address);
     function tokenId() external view returns(uint256);
-    function fractionalize(uint256 _tokenIn, uint256[2] memory _principleWithdrawn, uint256[2] memory _amountLent) external;
+    function fractionalize(uint256 _tokenIn, uint256 _amountLent) external;
     function deposits(uint256 _tokenId) external view returns(uint256);
     function withdrawals(uint256 _tokenId) external view returns(uint256);
     function withdraw(uint256 _tokenId) external; 
@@ -61,6 +61,12 @@ contract Market {
     function removeOrder(uint256 _orderNumber) external {
         orderInfo memory order = orders[_orderNumber];
         require(order.user == msg.sender);
+        if (order.bid) { 
+            uint256 total = order.price * order.amount / decimalAdj;
+            IERC20(order.token).transfer(msg.sender, total);
+        } else {
+            ILoan(order.loan).transferFrom(address(this), msg.sender, order.tokenId);
+        }
         orders[_orderNumber].amount = 0;
     }
 
@@ -100,24 +106,9 @@ contract Market {
         if (_amount < ILoan(bid.loan).deposits(_tokenId)) {
             // We need to "Fractionalize to match exact amounts & then send back unmatched amounts
 
-            uint256 p0 = _amount;
-            uint256 p1 = ILoan(bid.loan).deposits(_tokenId) - _amount; 
-            uint256 w0 = ILoan(bid.loan).withdrawals(_tokenId) * _amount / ILoan(bid.loan).deposits(_tokenId);
-            uint256 w1 = ILoan(bid.loan).withdrawals(_tokenId) - w0;
-
-            uint256[2] memory newPrinciple = [p0, p1];
-            uint256[2] memory newWithdraws = [w0, w1];
-
-            /*
-            newPrinciple.push(p0);
-            newPrinciple.push(p1);
-            newWithdraws.push(w0);
-            newWithdraws.push(w1);
-            */
-
-            ILoan(bid.loan).fractionalize(_tokenId, newPrinciple, newWithdraws);
-            //ILoan(bid.loan).transferFrom(address(this), bid.user, ILoan(bid.loan).tokenId() - 1);
-            ILoan(bid.loan).transferFrom(address(this), msg.sender, ILoan(bid.loan).tokenId());
+            ILoan(bid.loan).fractionalize(_tokenId, _amount);
+            ILoan(bid.loan).transferFrom(address(this), bid.user, ILoan(bid.loan).tokenId() - 2);
+            ILoan(bid.loan).transferFrom(address(this), msg.sender, ILoan(bid.loan).tokenId() - 1);
         } else {
             ILoan(bid.loan).transferFrom(address(this), bid.user, _tokenId);
         }
@@ -161,19 +152,11 @@ contract Market {
 
         token.transferFrom(msg.sender, ask.user, total);
 
-        if (_amount < ILoan(ask.loan).deposits(_tokenId)) {
+        if (_amount <  ILoan(ask.loan).deposits(ask.tokenId)) {
             // We need to "Fractionalize to match exact amounts & then send back unmatched amounts
-            uint256 p0 = _amount;
-            uint256 p1 = ILoan(ask.loan).deposits(_tokenId) - _amount; 
-            uint256 w0 = ILoan(ask.loan).withdrawals(_tokenId) * _amount / ILoan(ask.loan).deposits(_tokenId);
-            uint256 w1 = ILoan(ask.loan).withdrawals(_tokenId) - w0;
 
-            uint256[2] memory newPrinciple = [p0, p1];
-            uint256[2] memory newWithdraws = [w0, w1];
-
-
-            ILoan(ask.loan).fractionalize(_tokenId, newPrinciple, newWithdraws);
-            ILoan(ask.loan).transferFrom(address(this), msg.sender, ILoan(ask.loan).tokenId() - 1);
+            ILoan(ask.loan).fractionalize(_tokenId, _amount);
+            ILoan(ask.loan).transferFrom(address(this), msg.sender, ILoan(ask.loan).tokenId() - 2);
             //loan.transfer(ask.user, loan.tokenId());
         } else {
             ILoan(ask.loan).transferFrom(address(this), msg.sender, _tokenId);
@@ -181,6 +164,7 @@ contract Market {
 
         //token.transferFrom(ask.user, ask.user, total);
         orders[_askNumber].amount = orders[_askNumber].amount - _amount;
+        orders[_askNumber].tokenId = ILoan(ask.loan).tokenId() - 1;
 
 
 
