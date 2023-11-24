@@ -8,9 +8,7 @@ interface ILock {
     function onRepaidLoan(uint256 _loanNumber) external; 
 }
 
-interface IFactory {
-    function loanAddress(address _loan) external view returns(uint256);
-}
+
 
 abstract contract Loan {
 
@@ -25,7 +23,10 @@ abstract contract Loan {
         isBorrower(msg.sender);
         _;
     }
-    
+
+
+    mapping(address => uint256) public backerWithdrawals;
+
     uint256 constant secondsPerYear = 31536000;
     uint256 constant decimalAdj = 10000;
     uint256 public tokenId;
@@ -37,13 +38,15 @@ abstract contract Loan {
     bool public depositsOpen = true;
     bool public defaulted = false; 
 
-    uint256 public rateSharingLenders;
+    uint256 public revenueSharePct;
     // % of borrowed amount paid to backers 
-    uint256 public finderFee;
+    uint256 public finderFeePct;
     // % fee on principal repaid early (i.e. if decides to repay full loan before expiry)
     uint256 public minInterest; 
     // % additional rate on principal repaid late 
     uint256 public latePaymentRate; 
+
+    uint256 public depositDeadline;
 
     uint256 public finalPaymentTime;
 
@@ -60,7 +63,9 @@ abstract contract Loan {
     address public keeper;
     address public borrower;
 
-    uint256 public borrowLimit;
+    uint256 public maxLoan;
+    uint256 public minLoan;
+
     uint256 public totalLent = 0;
     uint256 public principleRepaid = 0;
     uint256 public principleWithdrawn = 0;
@@ -98,7 +103,7 @@ abstract contract Loan {
         /*
         TO DO FIX CALCS! 
         while ((time > timeNow) && (i < nPayments)) {
-            latePayment += ((principleSchedule[i] * totalLent / borrowLimit) * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
+            latePayment += ((principleSchedule[i] * totalLent / maxLoan) * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
             i += 1;
         }
         */ 
@@ -112,7 +117,8 @@ abstract contract Loan {
 
     function withdrawLentFunds() external onlyBorrower {
         uint256 _amountFree = totalLent - principleWithdrawn;
-        token.transfer(borrower, _amountFree);
+        uint256 _finderFee = _amountFree * finderFeePct / decimalAdj;
+        token.transfer(borrower, (_amountFree - _finderFee));
         principleWithdrawn += _amountFree;
     }
 
@@ -123,7 +129,7 @@ abstract contract Loan {
         if (depositsOpen){
             depositsOpen = false;
         }
-        uint256 principleDue = principleSchedule[paymentIndex]* totalLent / borrowLimit; 
+        uint256 principleDue = principleSchedule[paymentIndex]* totalLent / maxLoan; 
         uint256 interestDue = calcInterstDue();
         uint256 totalDue = principleDue + interestDue;
 

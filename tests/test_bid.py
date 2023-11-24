@@ -33,7 +33,7 @@ def test_bid(accounts, usdc, market, factory, locker, token, bidder, whale, borr
     usdc.approve(market, amount, {'from' : bidder})
 
     bidderBal = usdc.balanceOf(bidder)
-    market.placeBid(10000, amount, usdc, loan, {'from' : bidder})
+    market.placeBid(10000, amount, 0, usdc, loan, {'from' : bidder})
     assert usdc.balanceOf(bidder) == bidderBal - amount
     loan.approve(market, 0, {'from' : lender})
     lenderBal = usdc.balanceOf(lender)
@@ -71,7 +71,7 @@ def test_bid_partial(accounts, usdc, market, factory, locker, token, bidder, wha
     usdc.approve(market, amount, {'from' : bidder})
 
     bidderBal = usdc.balanceOf(bidder)
-    market.placeBid(10000, amount, usdc, loan, {'from' : bidder})
+    market.placeBid(10000, amount, 0, usdc, loan, {'from' : bidder})
     assert usdc.balanceOf(bidder) == bidderBal - amount
     loan.approve(market, 0, {'from' : lender})
     lenderBal = usdc.balanceOf(lender)
@@ -110,7 +110,7 @@ def test_remove_bid(accounts, usdc, market, factory, locker, token, bidder, whal
     usdc.approve(market, amount, {'from' : bidder})
 
     bidderBal = usdc.balanceOf(bidder)
-    market.placeBid(10000, amount, usdc, loan, {'from' : bidder})
+    market.placeBid(10000, amount, 0, usdc, loan, {'from' : bidder})
     assert usdc.balanceOf(bidder) == bidderBal - amount
     loan.approve(market, 0, {'from' : lender})
     lenderBal = usdc.balanceOf(lender)

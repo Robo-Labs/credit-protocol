@@ -27,6 +27,7 @@ contract Market {
         uint256 price; 
         uint256 amount; 
         uint256 tokenId;
+        uint256 maxWithdrawn;
         address user;
         bool bid;
         address loan;
@@ -71,7 +72,7 @@ contract Market {
     }
 
     // Buying Token
-    function placeBid(uint256 _price,  uint256 _amount, address _token, address _loan) external {
+    function placeBid(uint256 _price,  uint256 _amount, uint256 _maxWithdrawn, address _token, address _loan) external {
         // TO DO - transfer token / add to order book + check if matches / add data tracking how many assets user entitled to 
         uint256 total = _price * _amount / decimalAdj;
         IERC20(_token).transferFrom(msg.sender, address(this), total);
@@ -80,6 +81,7 @@ contract Market {
             price : _price,
             amount : _amount,
             tokenId : 0,
+            maxWithdrawn : _maxWithdrawn,
             user : msg.sender,
             bid : true,
             loan : _loan,
@@ -100,7 +102,7 @@ contract Market {
         require(bid.bid);
         require(_amount <= bid.amount);
         require(_amount <= ILoan(bid.loan).deposits(_tokenId));
-
+        require(bid.maxWithdrawn >= (ILoan(bid.loan).withdrawals(_tokenId) * _amount / bid.amount) );
         ILoan(bid.loan).transferFrom(msg.sender, address(this), _tokenId);
 
         if (_amount < ILoan(bid.loan).deposits(_tokenId)) {
@@ -130,6 +132,7 @@ contract Market {
             price : _price,
             amount : _amount,
             tokenId : _tokenId,
+            maxWithdrawn : 0,
             user : msg.sender,
             bid : false,
             loan : _loan,

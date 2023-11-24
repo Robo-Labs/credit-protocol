@@ -30,7 +30,7 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
 
 
     usdc.approve(loan, amtOwed * 2, {'from' : borrower})
-    nPayments = len(loanInfo[4])
+    nPayments = len(loanInfo[-1])
     for i in range(nPayments):
         tx = loan.repayNext({'from' : borrower})
         assert (loan.principleRepaid() + loan.interestEarned() + loan.latePayments()) == borrowerBal + amount - usdc.balanceOf(borrower)

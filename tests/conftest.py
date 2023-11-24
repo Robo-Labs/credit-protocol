@@ -9,7 +9,7 @@ def amount():
 
 @pytest.fixture
 def loanInfo(borrower, usdc, amount):
-    loan = [borrower, usdc, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 500, 500, 2 ]
+    loan = [borrower, usdc,  amount/2, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 1000, 0 ,500 ,3600 ,500, 2 ]
     yield loan
 
 @pytest.fixture

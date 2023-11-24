@@ -19,11 +19,15 @@ contract PoolFactory {
     struct loanInfo{
         address _borrower;
         address _token;
+        uint256 _minLoan;
         uint256 _maxLoan;
         uint256 _amountBacked;
         uint256[] _principleSchedule;
         uint256[] _paymentDeadline;
         uint256 _interestRate;
+        uint256 _finderFee;
+        uint256 _revShare;
+        uint256 _timeOpen;
         uint256 _lateFee;
         uint256 _nPayments;
 
@@ -38,6 +42,7 @@ contract PoolFactory {
         _;
 
     }
+
 
     mapping(uint256 => loanInfo) public loanLookup;
     mapping(uint256 => mapping(address => uint256)) public backedLoans;
@@ -94,13 +99,62 @@ contract PoolFactory {
         loanLookup[_loanNumber]._amountBacked -= _amount;
     }
 
+    function borrower(uint256 _loanNumber) public view returns(address) {
+        return(loanLookup[_loanNumber]._borrower);
+    }
+
+    function token(uint256 _loanNumber) public view returns(address) {
+        return(loanLookup[_loanNumber]._token);
+    }
+
+    function minLoan(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._minLoan);
+    }
+
+    function maxLoan(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._maxLoan);
+    }
+
+    function interestRate(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._interestRate);
+    }
+
+    function nPayments(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._nPayments);
+    }
+
+    function latePaymentRate(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._lateFee);
+    }
+
+    function finderFeePct(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._finderFee);
+    }
+
+    function revenueSharePct(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._revShare);
+    }
+
+    function timeOpen(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._timeOpen);
+    }
+
+
     function createLoan(uint256 _loanNumber) external {
         require(loanLookup[_loanNumber]._amountBacked >= minBacking);
         require(!loanApproved[_loanNumber]);
         loanApproved[_loanNumber] = true;
-        loanInfo storage loan = loanLookup[_loanNumber];
-        address newPool = address(new LendingPool("test", "test", loan._borrower, loan._token, loan._maxLoan, loan._principleSchedule, loan._paymentDeadline, loan._interestRate, loan._lateFee, loan._nPayments));
+        loanInfo storage _loan = loanLookup[_loanNumber];
+        address newPool = address(new LendingPool(
+            "test", 
+            "test",
+            address(this),
+            _loanNumber,
+            _loan._principleSchedule,
+            _loan._paymentDeadline
+            ));
         loanAddress[_loanNumber] = newPool;
+
         isLoan[newPool] = true;
     }
 

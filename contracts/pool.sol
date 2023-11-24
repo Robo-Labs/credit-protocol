@@ -9,37 +9,54 @@ interface ILock {
     function onRepaidLoan(uint256 _loanNumber) external; 
 }
 
+interface IFactory {
+    function loanAddress(address _loan) external view returns(uint256);
+    function borrower(uint256 _loanNumber) external view returns(address);
+    function token(uint256 _loanNumber) external view returns(address);
+    function minLoan(uint256 _loanNumber) external view returns(uint256);
+    function maxLoan(uint256 _loanNumber) external view returns(uint256);
+    function interestRate(uint256 _loanNumber) external view returns(uint256);
+    function nPayments(uint256 _loanNumber) external view returns(uint256);
+    function latePaymentRate(uint256 _loanNumber) external view returns(uint256);
+    function finderFeePct(uint256 _loanNumber) external view returns(uint256);
+    function revenueSharePct(uint256 _loanNumber) external view returns(uint256);
+    function timeOpen(uint256 _loanNumber) external view returns(uint256);
+}
+
 contract LendingPool is ERC721, Loan {
 
     constructor(
-        string memory _name, 
-        string memory _symbol,
-        address _borrower,
-        address _token, 
-        uint256 _borrowLimit, 
-        uint256[] memory _principleSchedule,
-        uint256[] memory _paymentDeadline,
-        uint256 _interestRate,
-        uint256 _latePaymentRate,
-        uint256 _nPayments
-
+            string memory _name, 
+            string memory _symbol,
+            address _factory,
+            uint256 _loanNumber,
+            uint256[] memory _principleSchedule,
+            uint256[] memory _paymentDeadline
         ) 
         ERC721(_name, _symbol) public {
             interestTime = block.timestamp;
-            //uint256 n = _principleSchedule.length(); 
-            borrower = _borrower; 
-            token = IERC20(_token);
-            borrowLimit = _borrowLimit;
+            address _token;
+            _init(_factory, _loanNumber);
             principleSchedule = _principleSchedule;
             paymentDeadline = _paymentDeadline;
-            interestRate = _interestRate;
-            latePaymentRate = _latePaymentRate;
-            //uint256 _nPayments = principleSchedule.length();
-            nPayments = _nPayments;
-            finalPaymentTime = _paymentDeadline[_nPayments-1];
 
 
-        }
+    }
+
+    function _init(address _factory, uint256 _loanNumber) internal {
+        borrower = IFactory(_factory).borrower(_loanNumber);
+        token = IERC20(IFactory(_factory).token(_loanNumber));
+        interestRate = IFactory(_factory).interestRate(_loanNumber);
+        minLoan = IFactory(_factory).minLoan(_loanNumber);
+        maxLoan = IFactory(_factory).maxLoan(_loanNumber);
+        interestRate = IFactory(_factory).interestRate(_loanNumber);
+        nPayments = IFactory(_factory).nPayments(_loanNumber);
+        latePaymentRate = IFactory(_factory).latePaymentRate(_loanNumber);
+        finderFeePct = IFactory(_factory).finderFeePct(_loanNumber);
+        revenueSharePct = IFactory(_factory).revenueSharePct(_loanNumber);
+        depositDeadline = IFactory(_factory).timeOpen(_loanNumber) + block.timestamp;
+
+    }
 
     modifier onlyLender() {
         require((msg.sender == keeper) || isLender(msg.sender));
@@ -55,13 +72,14 @@ contract LendingPool is ERC721, Loan {
     mapping(uint256 => uint256) public deposits;
     mapping(uint256 => uint256) public withdrawals;
 
+
     // How much is available to be withdrawn 
     function calcAmountFree(uint256 _tokenId) public view returns(uint256) {
         if (totalLent == 0){
             return 0;
         }
         uint256 depositAmt = deposits[_tokenId];
-        uint256 interestShareUsers = interestEarned * rateSharingLenders / decimalAdj;
+        uint256 interestShareUsers = interestEarned * revenueSharePct / decimalAdj;
         uint256 totalDue = depositAmt * (principleRepaid + interestShareUsers + latePayments) / totalLent;
         return (totalDue - withdrawals[_tokenId]);
 
@@ -90,7 +108,7 @@ contract LendingPool is ERC721, Loan {
 
     // for users to provide liquidity 
     function deposit(uint256 _amount) external {
-        require((_amount + totalLent) <= borrowLimit);
+        require((_amount + totalLent) <= maxLoan);
         require(depositsOpen);
 
         token.transferFrom(msg.sender, address(this), _amount);
