@@ -29,7 +29,6 @@ abstract contract Loan {
 
     uint256 constant secondsPerYear = 31536000;
     uint256 constant decimalAdj = 10000;
-    uint256 public tokenId;
     uint256 public loanNumber;
     address public locker;
     address public factory;
@@ -60,7 +59,6 @@ abstract contract Loan {
     uint256 public interestTime;
 
     address public management;
-    address public keeper;
     address public borrower;
 
     uint256 public maxLoan;
@@ -120,6 +118,14 @@ abstract contract Loan {
         uint256 _finderFee = _amountFree * finderFeePct / decimalAdj;
         token.transfer(borrower, (_amountFree - _finderFee));
         principleWithdrawn += _amountFree;
+    }
+
+    function cancelLoan() external onlyBorrower {
+        require(block.timestamp >= depositDeadline);
+        require(totalLent < minLoan);
+
+        // TO DO -> lenders can withdraw / mark loan as finalised 
+        // TO DO -> unlock backing funds (min amount not reached)
     }
 
 

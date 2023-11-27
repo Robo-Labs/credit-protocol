@@ -47,11 +47,15 @@ contract PoolFactory {
     mapping(uint256 => loanInfo) public loanLookup;
     mapping(uint256 => mapping(address => uint256)) public backedLoans;
     mapping(uint256 => address) public loanAddress;
+    mapping(uint256 => uint256) public loanDeadline;
+
     mapping(uint256 => bool) public loanApproved;
     mapping(address => bool) public isLoan;
 
     uint256 loanCounter = 0;
     uint256 public minBacking;
+    // How long loan has to be approved once created
+    uint256 public approvalTime = 10000;
     address public lockingContract;
     address public governance;
 
@@ -80,13 +84,17 @@ contract PoolFactory {
     function proposeLoan(loanInfo memory _loan) external {
         require(isValidLoan(_loan));
         loanLookup[loanCounter] = _loan;
+        loanDeadline[loanCounter] = block.timestamp + approvalTime;
+
         loanCounter += 1;
+
     }
 
     // function for stakers to back a loan
     function backLoan(uint256 _amount, uint256 _loanNumber) external {
         require(_loanNumber < loanCounter);
         require(!loanApproved[_loanNumber]);
+        require(block.timestamp <= loanDeadline[_loanNumber]);
         ILock(lockingContract).backLoan(_amount, _loanNumber, msg.sender);
         backedLoans[_loanNumber][msg.sender] += _amount;
         loanLookup[_loanNumber]._amountBacked += _amount;
@@ -143,6 +151,8 @@ contract PoolFactory {
     function createLoan(uint256 _loanNumber) external {
         require(loanLookup[_loanNumber]._amountBacked >= minBacking);
         require(!loanApproved[_loanNumber]);
+        require(block.timestamp <= loanDeadline[_loanNumber]);
+
         loanApproved[_loanNumber] = true;
         loanInfo storage _loan = loanLookup[_loanNumber];
         address newPool = address(new LendingPool(

@@ -8,6 +8,10 @@ interface IFactory {
     function isLoan(address _loan) external returns(bool);
 }
 
+interface ILoan {
+    function loanFinal() external returns(bool);
+}
+
 contract LockingContract {
 
     IERC20 public token;
@@ -103,25 +107,25 @@ contract LockingContract {
     }
 
     function onDefault(uint256 _loanNumber) external onlyPool {
-        require(!loanFinalised[_loanNumber]);
+        require(ILoan(msg.sender).loanFinal() == false);
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
-        uint256 totalDefault = 0;
+        uint256 defaultOut = 0;
         while (i < nBacked[_loanNumber]){
             address _user = backUsers[_loanNumber][i];
             totalBacked[_user] -= userBacking[_user][_loanNumber];
-            totalDefault += userBacking[_user][_loanNumber];
+            totalLocked[_user] -= userBacking[_user][_loanNumber];
+            defaultOut += userBacking[_user][_loanNumber];
             userBacking[_user][_loanNumber] = 0;
             i += 1;
         }
         // Transfer ownership of locked tokens to pool ~> can use NFT to redeem 
-
-        loanFinalised[_loanNumber] = true;
+        token.transfer(msg.sender, defaultOut);
 
     }
 
     function onRepaidLoan(uint256 _loanNumber) external onlyPool {
-        require(!loanFinalised[_loanNumber]);
+        require(ILoan(msg.sender).loanFinal() == false);
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
         while (i < nBacked[_loanNumber]){
@@ -129,9 +133,7 @@ contract LockingContract {
             totalBacked[_user] -= userBacking[_user][_loanNumber];
             userBacking[_user][_loanNumber] = 0;
             i += 1;
-
         }
-        loanFinalised[_loanNumber] = true;
     }
 
 }

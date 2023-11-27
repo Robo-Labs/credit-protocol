@@ -7,6 +7,7 @@ import {Loan} from "contracts/loan.sol";
 interface ILock {
     function onDefault(uint256 _loanNumber) external;
     function onRepaidLoan(uint256 _loanNumber) external; 
+    function token() external view returns(address);
 }
 
 interface IFactory {
@@ -21,6 +22,7 @@ interface IFactory {
     function finderFeePct(uint256 _loanNumber) external view returns(uint256);
     function revenueSharePct(uint256 _loanNumber) external view returns(uint256);
     function timeOpen(uint256 _loanNumber) external view returns(uint256);
+    function lockingContract() external view returns(address);
 }
 
 contract LendingPool is ERC721, Loan {
@@ -39,8 +41,8 @@ contract LendingPool is ERC721, Loan {
             _init(_factory, _loanNumber);
             principleSchedule = _principleSchedule;
             paymentDeadline = _paymentDeadline;
-
-
+            loanNumber = _loanNumber;
+            finalPaymentTime = paymentDeadline[nPayments - 1];
     }
 
     function _init(address _factory, uint256 _loanNumber) internal {
@@ -55,11 +57,11 @@ contract LendingPool is ERC721, Loan {
         finderFeePct = IFactory(_factory).finderFeePct(_loanNumber);
         revenueSharePct = IFactory(_factory).revenueSharePct(_loanNumber);
         depositDeadline = IFactory(_factory).timeOpen(_loanNumber) + block.timestamp;
-
+        locker = IFactory(_factory).lockingContract();
     }
 
     modifier onlyLender() {
-        require((msg.sender == keeper) || isLender(msg.sender));
+        require(isLender(msg.sender));
         _;
 
     }
@@ -71,7 +73,8 @@ contract LendingPool is ERC721, Loan {
     // Tracking deposits & withdrawals by 
     mapping(uint256 => uint256) public deposits;
     mapping(uint256 => uint256) public withdrawals;
-
+    uint256 public tokenId;
+    uint256 public amountLocked;
 
     // How much is available to be withdrawn 
     function calcAmountFree(uint256 _tokenId) public view returns(uint256) {
@@ -130,15 +133,29 @@ contract LendingPool is ERC721, Loan {
     function triggerDefault() external {
         require(hasDefaulted());
         require(!loanFinal);
+        require(block.timestamp >= finalPaymentTime);
+        ILock(locker).onDefault(loanNumber);
         defaulted = true;
         loanFinal = true;
-        ILock(locker).onDefault(loanNumber);
+    }
+
+    function triggerFinal() external {
+        require(!hasDefaulted());
+        require(!loanFinal);
+        require(block.timestamp >= finalPaymentTime);
+        ILock(locker).onRepaidLoan(loanNumber);
+        defaulted = false;
+        loanFinal = true;
     }
 
     function claimDefaultBonus(uint256 _tokenId) external {
         require(hasDefaulted());
+        require(loanFinal);
         require(ownerOf(_tokenId) == msg.sender);
 
-        // TO DO -> transfer backed tokens 
+        uint256 _amount = amountLocked * deposits[_tokenId] / totalLent;
+        // TO DO check if already withdrawn default bonus ~ store bool if claimed or not 
+        IERC20(ILock(locker).token()).transfer(msg.sender, _amount);
+
     }
 }
