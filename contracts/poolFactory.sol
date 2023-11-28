@@ -147,6 +147,10 @@ contract PoolFactory {
         return(loanLookup[_loanNumber]._timeOpen);
     }
 
+    function amountBacked(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._amountBacked);
+    }
+
 
     function createLoan(uint256 _loanNumber) external {
         require(loanLookup[_loanNumber]._amountBacked >= minBacking);

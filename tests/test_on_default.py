@@ -31,5 +31,10 @@ def test_default(accounts, usdc, factory, locker, token, borrower, backer, lende
     assert loan.hasDefaulted() 
     loan.triggerDefault({'from' : lender})
 
+    assert token.balanceOf(loan) == 10000
 
     
+    loan.claimDefaultBonus(0, {'from' : lender})
+
+    assert token.balanceOf(loan) == 0
+    assert token.balanceOf(lender) == 10000

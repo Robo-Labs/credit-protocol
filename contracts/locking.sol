@@ -5,11 +5,17 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PoolFactory} from "contracts/poolFactory.sol";
 
 interface IFactory { 
-    function isLoan(address _loan) external returns(bool);
+    function isLoan(address _loan) external view returns(bool);
+    function loanAddress(uint256 _loanNumber) external view returns(address);
+    function amountBacked(uint256 _loanNumber) external view returns(uint256);
+
 }
 
 interface ILoan {
-    function loanFinal() external returns(bool);
+    function loanFinal() external view returns(bool);
+    function claimLockingRevenue() external;
+    function token() external view returns(address);
+    function calcLockingRevenue() external view returns(uint256);
 }
 
 contract LockingContract {
@@ -35,7 +41,10 @@ contract LockingContract {
     mapping(uint256 => address) public lockUsers;
     mapping(address => uint256) public totalLocked;
     mapping(address => uint256) public totalBacked;
+    mapping(uint256 => uint256) public totalBackedLoan;
+    mapping(uint256 => uint256) public totalRevenue;
     mapping(address => mapping ( uint256 => uint256)) public userBacking;
+    mapping(address => mapping ( uint256 => uint256)) public revenueClaimed;
 
 
     constructor(address _gov) public {
@@ -66,8 +75,12 @@ contract LockingContract {
         initialised = true;
     }
 
-    function isLoan(address _loan) public returns(bool) {
+    function isLoan(address _loan) public view returns(bool) {
         return(IFactory(factory).isLoan(_loan));
+    }
+
+    function loanAddress(uint256 _loanNumber) public view returns(address) {
+        return IFactory(factory).loanAddress(_loanNumber);
     }
 
     function lockTokens(uint256 _amount, uint256 _duration) external {
@@ -105,6 +118,19 @@ contract LockingContract {
         totalBacked[_user] -= _amount;
         userBacking[_user][_loanNumber] -= _amount;
     }
+
+    function claimRevenues(uint256 _loanNumber) external {
+        address loan = loanAddress(_loanNumber);
+        uint256 amountFree = ILoan(loan).calcLockingRevenue();
+        if (amountFree > 0 ){
+            ILoan(loan).claimLockingRevenue();
+            totalRevenue[_loanNumber] += amountFree;
+        }
+        uint256 userRevenue = (totalRevenue[_loanNumber] * totalBacked[msg.sender] / IFactory(factory).amountBacked(_loanNumber)) - revenueClaimed[msg.sender][_loanNumber]; 
+        IERC20(ILoan(loan).token()).transfer(msg.sender, userRevenue);
+        revenueClaimed[msg.sender][_loanNumber] += userRevenue;
+    }
+
 
     function onDefault(uint256 _loanNumber) external onlyPool {
         require(ILoan(msg.sender).loanFinal() == false);

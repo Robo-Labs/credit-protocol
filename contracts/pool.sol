@@ -23,6 +23,7 @@ interface IFactory {
     function revenueSharePct(uint256 _loanNumber) external view returns(uint256);
     function timeOpen(uint256 _loanNumber) external view returns(uint256);
     function lockingContract() external view returns(address);
+    function amountBacked(uint256 _loanNumber) external view returns(uint256);
 }
 
 contract LendingPool is ERC721, Loan {
@@ -58,6 +59,7 @@ contract LendingPool is ERC721, Loan {
         revenueSharePct = IFactory(_factory).revenueSharePct(_loanNumber);
         depositDeadline = IFactory(_factory).timeOpen(_loanNumber) + block.timestamp;
         locker = IFactory(_factory).lockingContract();
+        amountLocked = IFactory(_factory).amountBacked(_loanNumber);
     }
 
     modifier onlyLender() {
@@ -73,8 +75,12 @@ contract LendingPool is ERC721, Loan {
     // Tracking deposits & withdrawals by 
     mapping(uint256 => uint256) public deposits;
     mapping(uint256 => uint256) public withdrawals;
+    mapping(uint256 => bool) public claimedDefault;
     uint256 public tokenId;
     uint256 public amountLocked;
+
+    // Tracking revenue claimed by lockers
+    uint256 public revenueClaimed;
 
     // How much is available to be withdrawn 
     function calcAmountFree(uint256 _tokenId) public view returns(uint256) {
@@ -85,7 +91,6 @@ contract LendingPool is ERC721, Loan {
         uint256 interestShareUsers = interestEarned * revenueSharePct / decimalAdj;
         uint256 totalDue = depositAmt * (principleRepaid + interestShareUsers + latePayments) / totalLent;
         return (totalDue - withdrawals[_tokenId]);
-
     }
 
     // used to fractionalize NFT's to different amounts 
@@ -156,6 +161,18 @@ contract LendingPool is ERC721, Loan {
         uint256 _amount = amountLocked * deposits[_tokenId] / totalLent;
         // TO DO check if already withdrawn default bonus ~ store bool if claimed or not 
         IERC20(ILock(locker).token()).transfer(msg.sender, _amount);
-
     }
+
+    function calcLockingRevenue() public view returns(uint256) {
+        uint256 revenueEarned = interestEarned * revenueSharePct / decimalAdj;
+        uint256 amount = revenueEarned - revenueClaimed;
+    }
+
+    function claimLockingRevenue() external {
+        require(msg.sender == locker);
+        uint256 amount = calcLockingRevenue();
+        token.transfer(locker, amount);
+        revenueClaimed += amount;
+    }
+
 }
