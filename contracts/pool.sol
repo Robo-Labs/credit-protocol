@@ -3,6 +3,7 @@ pragma solidity 0.8.18;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Loan} from "contracts/loan.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface ILock {
     function onDefault(uint256 _loanNumber) external;
@@ -146,8 +147,9 @@ contract LendingPool is ERC721, Loan {
 
     function triggerFinal() external {
         require(!hasDefaulted());
-        require(!loanFinal);
-        require(block.timestamp >= finalPaymentTime);
+        require(loanRepaid);
+        require(loanFinal);
+        //require(block.timestamp >= finalPaymentTime);
         ILock(locker).onRepaidLoan(loanNumber);
         defaulted = false;
         loanFinal = true;
@@ -165,7 +167,7 @@ contract LendingPool is ERC721, Loan {
 
     function calcLockingRevenue() public view returns(uint256) {
         uint256 revenueEarned = interestEarned * revenueSharePct / decimalAdj;
-        uint256 amount = revenueEarned - revenueClaimed;
+        return (revenueEarned - revenueClaimed);
     }
 
     function claimLockingRevenue() external {

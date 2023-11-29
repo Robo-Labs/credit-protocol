@@ -72,7 +72,7 @@ def lender(accounts, usdc, whale, amount):
 
 @pytest.fixture
 def borrower(accounts, usdc, whale, amount):
-    usdc.transfer(accounts[0], amount*2, {'from' : whale} )
+    usdc.transfer(accounts[2], amount*2, {'from' : whale} )
 
     yield accounts[2]
 

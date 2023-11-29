@@ -3,6 +3,8 @@ pragma solidity 0.8.18;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PoolFactory} from "contracts/poolFactory.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 
 interface IFactory { 
     function isLoan(address _loan) external view returns(bool);
@@ -18,7 +20,7 @@ interface ILoan {
     function calcLockingRevenue() external view returns(uint256);
 }
 
-contract LockingContract {
+contract LockingContract is ReentrancyGuard {
 
     IERC20 public token;
     address public governance;
@@ -133,7 +135,6 @@ contract LockingContract {
 
 
     function onDefault(uint256 _loanNumber) external onlyPool {
-        require(ILoan(msg.sender).loanFinal() == false);
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
         uint256 defaultOut = 0;
@@ -151,7 +152,6 @@ contract LockingContract {
     }
 
     function onRepaidLoan(uint256 _loanNumber) external onlyPool {
-        require(ILoan(msg.sender).loanFinal() == false);
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
         while (i < nBacked[_loanNumber]){

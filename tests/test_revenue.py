@@ -3,7 +3,7 @@ from brownie import Contract, interface, accounts, project, chain
 import pytest
 
 
-def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lender, loan_contract, loanInfo, amount) : 
+def test_locked_revenue(accounts, usdc, factory, locker, token, borrower, backer, lender, loan_contract, loanInfo, amount, whale) : 
     factory.proposeLoan(loanInfo , {'from' : borrower})
     # TO DO - Back Loan 
     chain.mine(1)
@@ -28,6 +28,9 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
     chain.sleep(1000)
     chain.mine(10)
 
+    t = 365 * 24 * 60 * 60 
+    chain.sleep(t)
+    chain.mine(1)
 
     usdc.approve(loan, amtOwed * 2, {'from' : borrower})
     nPayments = loanInfo[-1]
@@ -40,15 +43,15 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
     assert amtOwed == 0
     loan.withdraw(0, {'from' : lender})
     assert usdc.balanceOf(lender) >= lenderBal
-    
-    with brownie.reverts(): 
-        loan.triggerDefault({'from' : lender})
 
-    loan.triggerFinal({'from' : lender})
+    backerBal = usdc.balanceOf(backer)
+    revenue = loan.calcLockingRevenue()
 
-    assert locker.totalBacked(backer) == 0 
-    assert locker.totalLocked(backer) == 10000
+    locker.claimRevenues(0, {'from' : backer})
 
-    assert False
+    assert usdc.balanceOf(backer) == backerBal + revenue
+    assert loan.calcLockingRevenue() == 0
 
+    locker.claimRevenues(0, {'from' : backer})
+    assert usdc.balanceOf(backer) == backerBal + revenue
     

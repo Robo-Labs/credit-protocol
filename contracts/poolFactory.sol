@@ -3,13 +3,15 @@ pragma solidity 0.8.18;
 
 //import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LendingPool} from "contracts/pool.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 //import {ILock} from "contracts/interfaces/ILock.sol";
 
 interface ILock { 
     function backLoan(uint256 _amount, uint256 _loanNumber, address _user) external;
 }
 
-contract PoolFactory {
+contract PoolFactory is ReentrancyGuard {
 
     struct backingInfo{
         uint256 loan;

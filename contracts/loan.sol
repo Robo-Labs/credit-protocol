@@ -2,6 +2,7 @@
 pragma solidity 0.8.18;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface ILock {
     function onDefault(uint256 _loanNumber) external;
@@ -10,7 +11,7 @@ interface ILock {
 
 
 
-abstract contract Loan {
+abstract contract Loan is ReentrancyGuard {
 
     IERC20 public token;
 
