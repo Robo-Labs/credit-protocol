@@ -25,16 +25,16 @@ def test_default(accounts, usdc, factory, locker, token, borrower, backer, lende
     assert usdc.balanceOf(borrower) == borrowerBal + amount
     amtOwed = loan.calcTotalDue()
     assert amtOwed >= amount
-    chain.sleep(loanInfo[6][-1])
+    chain.sleep(loanInfo[9][-1])
     chain.mine(1)
 
     assert loan.hasDefaulted() 
     loan.triggerDefault({'from' : lender})
-
     assert token.balanceOf(loan) == 10000
-
     
     loan.claimDefaultBonus(0, {'from' : lender})
 
     assert token.balanceOf(loan) == 0
     assert token.balanceOf(lender) == 10000
+    assert locker.totalBacked(backer) == 0 
+    assert locker.totalLocked(backer) == 0

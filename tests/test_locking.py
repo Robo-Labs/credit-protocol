@@ -13,7 +13,9 @@ def test_lock(accounts, usdc, factory, locker, token, borrower, backer, lender, 
     token.approve(locker, lockAmt, {'from' : backer})
     locker.lockTokens(lockAmt, 604800*2, {'from' : backer})
     assert token.balanceOf(backer) == startingBal - lockAmt
- 
+    assert locker.totalBacked(backer) == 0 
+    assert locker.totalLocked(backer) == 10000
+    
     with brownie.reverts() : 
         locker.redeemLocked(0, {'from' : backer})
 

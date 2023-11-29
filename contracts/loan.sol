@@ -37,8 +37,12 @@ abstract contract Loan is ReentrancyGuard {
     bool public loanRepaid = false;
     bool public depositsOpen = true;
     bool public defaulted = false; 
+    bool public hasCollateral = false; 
+    address public collateralToken;
+    uint256 public collateralAmt;
 
-    uint256 public revenueSharePct;
+    // share of revenue for backers 
+    uint256 public revenueSharePct = 500;
     // % of borrowed amount paid to backers 
     uint256 public finderFeePct;
     // % fee on principal repaid early (i.e. if decides to repay full loan before expiry)

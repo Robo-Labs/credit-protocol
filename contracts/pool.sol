@@ -25,6 +25,11 @@ interface IFactory {
     function timeOpen(uint256 _loanNumber) external view returns(uint256);
     function lockingContract() external view returns(address);
     function amountBacked(uint256 _loanNumber) external view returns(uint256);
+    function hasCollateral(uint256 _loanNumber) external view returns(bool);
+    function collateralToken(uint256 _loanNumber) external view returns(address);
+    function collateralAmount(uint256 _loanNumber) external view returns(uint256);
+
+
 }
 
 contract LendingPool is ERC721, Loan {
@@ -39,7 +44,6 @@ contract LendingPool is ERC721, Loan {
         ) 
         ERC721(_name, _symbol) public {
             interestTime = block.timestamp;
-            address _token;
             _init(_factory, _loanNumber);
             principleSchedule = _principleSchedule;
             paymentDeadline = _paymentDeadline;
@@ -57,10 +61,15 @@ contract LendingPool is ERC721, Loan {
         nPayments = IFactory(_factory).nPayments(_loanNumber);
         latePaymentRate = IFactory(_factory).latePaymentRate(_loanNumber);
         finderFeePct = IFactory(_factory).finderFeePct(_loanNumber);
-        revenueSharePct = IFactory(_factory).revenueSharePct(_loanNumber);
+        //revenueSharePct = IFactory(_factory).revenueSharePct(_loanNumber);
         depositDeadline = IFactory(_factory).timeOpen(_loanNumber) + block.timestamp;
         locker = IFactory(_factory).lockingContract();
         amountLocked = IFactory(_factory).amountBacked(_loanNumber);
+        if (IFactory(_factory).hasCollateral(_loanNumber)){
+            hasCollateral = true;
+            collateralToken = IFactory(_factory).collateralToken(_loanNumber);
+            collateralAmt = IFactory(_factory).collateralAmount(_loanNumber);
+        }
     }
 
     modifier onlyLender() {
@@ -151,6 +160,9 @@ contract LendingPool is ERC721, Loan {
         require(loanFinal);
         //require(block.timestamp >= finalPaymentTime);
         ILock(locker).onRepaidLoan(loanNumber);
+        if (hasCollateral){
+            IERC20(collateralToken).transfer(borrower, amount);
+        }
         defaulted = false;
         loanFinal = true;
     }
@@ -159,10 +171,18 @@ contract LendingPool is ERC721, Loan {
         require(hasDefaulted());
         require(loanFinal);
         require(ownerOf(_tokenId) == msg.sender);
-
+        require(!claimedDefault[_tokenId]);
         uint256 _amount = amountLocked * deposits[_tokenId] / totalLent;
         // TO DO check if already withdrawn default bonus ~ store bool if claimed or not 
         IERC20(ILock(locker).token()).transfer(msg.sender, _amount);
+
+        if (hasCollateral){
+            uint256 _userCollat = collateralAmt * deposits[_tokenId] / totalLent;
+            IERC20(collateralToken).transfer(msg.sender, _userCollat);
+        }
+
+        claimedDefault[_tokenId] = true;
+
     }
 
     function calcLockingRevenue() public view returns(uint256) {

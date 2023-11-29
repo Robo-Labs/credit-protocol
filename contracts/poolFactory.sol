@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-//import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LendingPool} from "contracts/pool.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -21,6 +21,9 @@ contract PoolFactory is ReentrancyGuard {
     struct loanInfo{
         address _borrower;
         address _token;
+        bool _hasCollateral;
+        address _collateralToken;
+        uint256 _collateralAmount;
         uint256 _minLoan;
         uint256 _maxLoan;
         uint256 _amountBacked;
@@ -28,7 +31,6 @@ contract PoolFactory is ReentrancyGuard {
         uint256[] _paymentDeadline;
         uint256 _interestRate;
         uint256 _finderFee;
-        uint256 _revShare;
         uint256 _timeOpen;
         uint256 _lateFee;
         uint256 _nPayments;
@@ -82,12 +84,19 @@ contract PoolFactory is ReentrancyGuard {
         return true;
     }
 
+    function _transferCollateral(address _from, address _to, uint256 _loanNumber) internal {
+        if(loanLookup[_loanNumber]._hasCollateral ){
+            IERC20 collateral = IERC20(loanLookup[_loanNumber]._collateralToken);
+            collateral.transferFrom(_from, _to, loanLookup[_loanNumber]._collateralAmount);
+        }
+    }
+
     // function to propose loan terms 
     function proposeLoan(loanInfo memory _loan) external nonReentrant {
         require(isValidLoan(_loan));
         loanLookup[loanCounter] = _loan;
         loanDeadline[loanCounter] = block.timestamp + approvalTime;
-
+        _transferCollateral(msg.sender, address(this), loanCounter);
         loanCounter += 1;
 
     }
@@ -141,9 +150,11 @@ contract PoolFactory is ReentrancyGuard {
         return(loanLookup[_loanNumber]._finderFee);
     }
 
+    /*
     function revenueSharePct(uint256 _loanNumber) public view returns(uint256) {
         return(loanLookup[_loanNumber]._revShare);
     }
+    */
 
     function timeOpen(uint256 _loanNumber) public view returns(uint256) {
         return(loanLookup[_loanNumber]._timeOpen);
@@ -153,6 +164,18 @@ contract PoolFactory is ReentrancyGuard {
         return(loanLookup[_loanNumber]._amountBacked);
     }
 
+
+    function hasCollateral(uint256 _loanNumber) public view returns(bool) {
+        return(loanLookup[_loanNumber]._hasCollateral);
+    }
+
+    function collateralToken(uint256 _loanNumber) public view returns(address) {
+        return(loanLookup[_loanNumber]._collateralToken);
+    }
+
+    function collateralAmount(uint256 _loanNumber) public view returns(uint256) {
+        return(loanLookup[_loanNumber]._collateralAmount);
+    }
 
     function createLoan(uint256 _loanNumber) external nonReentrant {
         require(loanLookup[_loanNumber]._amountBacked >= minBacking);
@@ -170,7 +193,7 @@ contract PoolFactory is ReentrancyGuard {
             _loan._paymentDeadline
             ));
         loanAddress[_loanNumber] = newPool;
-
+        _transferCollateral(address(this), newPool, _loanNumber);
         isLoan[newPool] = true;
     }
 

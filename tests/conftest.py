@@ -9,8 +9,16 @@ def amount():
 
 @pytest.fixture
 def loanInfo(borrower, usdc, amount):
-    loan = [borrower, usdc,  amount/2, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 1000, 0 ,500 ,3600 ,500, 2 ]
+    zeroAddress = '0x0000000000000000000000000000000000000000'
+    loan = [borrower, usdc, False, zeroAddress , 0 , amount/2, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 1000, 0 ,3600 ,500, 2 ]
     yield loan
+
+@pytest.fixture
+def loanInfoCollateral(borrower, usdc, weth, amount):
+    zeroAddress = '0x0000000000000000000000000000000000000000'
+    loan = [borrower, usdc, True, weth , amount , amount/2, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 1000, 0 ,3600 ,500, 2 ]
+    yield loan
+
 
 @pytest.fixture
 def factory_contract():
@@ -71,7 +79,8 @@ def lender(accounts, usdc, whale, amount):
     yield accounts[0]
 
 @pytest.fixture
-def borrower(accounts, usdc, whale, amount):
+def borrower(accounts, usdc, whale, weth, wethWhale, amount):
+    weth.transfer(accounts[2], amount*2, {'from' : wethWhale} )
     usdc.transfer(accounts[2], amount*2, {'from' : whale} )
 
     yield accounts[2]
@@ -86,12 +95,21 @@ def bidder(accounts):
 
 
 @pytest.fixture
+def wethWhale(accounts):
+    yield accounts.at("0xF04a5cC80B1E94C69B48f5ee68a08CD2F09A7c3E", force=True)
+
+
+@pytest.fixture
 def whale(accounts):
     yield accounts.at("0xcEe284F754E854890e311e3280b767F80797180d", force=True)
 
 @pytest.fixture
 def usdc():
     yield interface.IERC20("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")    
+
+@pytest.fixture
+def weth():
+    yield interface.IERC20("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")    
 
 # Function scoped isolation fixture to enable xdist.
 # Snapshots the chain before each test and reverts after test completion.
