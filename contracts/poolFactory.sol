@@ -61,7 +61,7 @@ contract PoolFactory is ReentrancyGuard {
     address public lockingContract;
     address public governance;
 
-    function setLockingContract(address _locker) external onlyGov {
+    function setLockingContract(address _locker) external nonReentrant onlyGov {
         lockingContract = _locker;
     }
 
@@ -83,7 +83,7 @@ contract PoolFactory is ReentrancyGuard {
     }
 
     // function to propose loan terms 
-    function proposeLoan(loanInfo memory _loan) external {
+    function proposeLoan(loanInfo memory _loan) external nonReentrant {
         require(isValidLoan(_loan));
         loanLookup[loanCounter] = _loan;
         loanDeadline[loanCounter] = block.timestamp + approvalTime;
@@ -93,7 +93,7 @@ contract PoolFactory is ReentrancyGuard {
     }
 
     // function for stakers to back a loan
-    function backLoan(uint256 _amount, uint256 _loanNumber) external {
+    function backLoan(uint256 _amount, uint256 _loanNumber) external nonReentrant {
         require(_loanNumber < loanCounter);
         require(!loanApproved[_loanNumber]);
         require(block.timestamp <= loanDeadline[_loanNumber]);
@@ -102,7 +102,7 @@ contract PoolFactory is ReentrancyGuard {
         loanLookup[_loanNumber]._amountBacked += _amount;
     }
 
-    function unBackLoan(uint256 _amount, uint256 _loanNumber) external {
+    function unBackLoan(uint256 _amount, uint256 _loanNumber) external nonReentrant {
         require(_loanNumber < loanCounter);
         require(!loanApproved[_loanNumber]);
         backedLoans[_loanNumber][msg.sender] -= _amount;
@@ -154,7 +154,7 @@ contract PoolFactory is ReentrancyGuard {
     }
 
 
-    function createLoan(uint256 _loanNumber) external {
+    function createLoan(uint256 _loanNumber) external nonReentrant {
         require(loanLookup[_loanNumber]._amountBacked >= minBacking);
         require(!loanApproved[_loanNumber]);
         require(block.timestamp <= loanDeadline[_loanNumber]);

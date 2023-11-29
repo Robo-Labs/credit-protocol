@@ -95,7 +95,7 @@ contract LendingPool is ERC721, Loan {
     }
 
     // used to fractionalize NFT's to different amounts 
-    function fractionalize(uint256 _tokenIn, uint256 _amountLent) external {
+    function fractionalize(uint256 _tokenIn, uint256 _amountLent) external nonReentrant {
         require(msg.sender ==  ownerOf(_tokenIn));
         uint256 principleWithdrawn = withdrawals[_tokenIn];
         uint256 amountBurn = deposits[_tokenIn];
@@ -116,7 +116,7 @@ contract LendingPool is ERC721, Loan {
     }
 
     // for users to provide liquidity 
-    function deposit(uint256 _amount) external {
+    function deposit(uint256 _amount) external nonReentrant {
         require((_amount + totalLent) <= maxLoan);
         require(depositsOpen);
 
@@ -128,7 +128,7 @@ contract LendingPool is ERC721, Loan {
 
     }
 
-    function withdraw(uint256 _tokenId) external {
+    function withdraw(uint256 _tokenId) external nonReentrant {
         require(!depositsOpen);
         require(ownerOf(_tokenId) == msg.sender);
         uint256 amount = calcAmountFree(_tokenId);
@@ -136,7 +136,7 @@ contract LendingPool is ERC721, Loan {
         withdrawals[_tokenId] += amount;
     }
 
-    function triggerDefault() external {
+    function triggerDefault() external nonReentrant {
         require(hasDefaulted());
         require(!loanFinal);
         require(block.timestamp >= finalPaymentTime);
@@ -145,7 +145,7 @@ contract LendingPool is ERC721, Loan {
         loanFinal = true;
     }
 
-    function triggerFinal() external {
+    function triggerFinal() external nonReentrant {
         require(!hasDefaulted());
         require(loanRepaid);
         require(loanFinal);
@@ -155,7 +155,7 @@ contract LendingPool is ERC721, Loan {
         loanFinal = true;
     }
 
-    function claimDefaultBonus(uint256 _tokenId) external {
+    function claimDefaultBonus(uint256 _tokenId) external nonReentrant {
         require(hasDefaulted());
         require(loanFinal);
         require(ownerOf(_tokenId) == msg.sender);
@@ -170,7 +170,7 @@ contract LendingPool is ERC721, Loan {
         return (revenueEarned - revenueClaimed);
     }
 
-    function claimLockingRevenue() external {
+    function claimLockingRevenue() external nonReentrant {
         require(msg.sender == locker);
         uint256 amount = calcLockingRevenue();
         token.transfer(locker, amount);

@@ -60,7 +60,7 @@ contract Market is ReentrancyGuard {
         return(IFactory(factory).isLoan(_loan));
     }
 
-    function removeOrder(uint256 _orderNumber) external {
+    function removeOrder(uint256 _orderNumber) external nonReentrant {
         orderInfo memory order = orders[_orderNumber];
         require(order.user == msg.sender);
         if (order.bid) { 
@@ -73,7 +73,7 @@ contract Market is ReentrancyGuard {
     }
 
     // Buying Token
-    function placeBid(uint256 _price,  uint256 _amount, uint256 _maxWithdrawn, address _token, address _loan) external {
+    function placeBid(uint256 _price,  uint256 _amount, uint256 _maxWithdrawn, address _token, address _loan) external nonReentrant {
         // TO DO - transfer token / add to order book + check if matches / add data tracking how many assets user entitled to 
         uint256 total = _price * _amount / decimalAdj;
         IERC20(_token).transferFrom(msg.sender, address(this), total);
@@ -94,7 +94,7 @@ contract Market is ReentrancyGuard {
 
     } 
 
-    function matchBid(uint256 _bidNumber, uint256 _amount, uint256 _tokenId) external {
+    function matchBid(uint256 _bidNumber, uint256 _amount, uint256 _tokenId) external nonReentrant {
         orderInfo memory bid = orders[_bidNumber];
         IERC20 token = IERC20(bid.token);
         uint256 price = bid.price;
@@ -124,7 +124,7 @@ contract Market is ReentrancyGuard {
     }
 
     // Selling Token
-    function placeAsk(uint256 _price, uint256 _amount  ,address _token, address _loan, uint256 _tokenId) external {
+    function placeAsk(uint256 _price, uint256 _amount  ,address _token, address _loan, uint256 _tokenId) external nonReentrant {
         uint256 loanAmount = ILoan(_loan).deposits(_tokenId);
         require(ILoan(_loan).ownerOf(_tokenId) == msg.sender);
         ILoan(_loan).transferFrom(msg.sender, address(this), _tokenId);
@@ -144,7 +144,7 @@ contract Market is ReentrancyGuard {
         orderNumber += 1;
     } 
 
-    function matchAsk(uint256 _askNumber,  uint256 _amount) external {
+    function matchAsk(uint256 _askNumber,  uint256 _amount) external nonReentrant {
         orderInfo memory ask = orders[_askNumber];
         IERC20 token = IERC20(ask.token);
         uint256 price = ask.price;

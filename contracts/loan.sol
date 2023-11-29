@@ -109,19 +109,19 @@ abstract contract Loan is ReentrancyGuard {
         return (interestDue + principalDue + latePayment);
     }
 
-    function closeLoan() external onlyBorrower {
+    function closeLoan() external nonReentrant onlyBorrower {
         require(depositsOpen);
         depositsOpen = false;
     }
 
-    function withdrawLentFunds() external onlyBorrower {
+    function withdrawLentFunds() external nonReentrant onlyBorrower {
         uint256 _amountFree = totalLent - principleWithdrawn;
         uint256 _finderFee = _amountFree * finderFeePct / decimalAdj;
         token.transfer(borrower, (_amountFree - _finderFee));
         principleWithdrawn += _amountFree;
     }
 
-    function cancelLoan() external onlyBorrower {
+    function cancelLoan() external nonReentrant onlyBorrower {
         require(block.timestamp >= depositDeadline);
         require(totalLent < minLoan);
 
@@ -131,7 +131,7 @@ abstract contract Loan is ReentrancyGuard {
 
 
     // for borrower to make next scheduled repayment  
-    function repayNext() external {
+    function repayNext() external nonReentrant {
         require(!loanRepaid);
         if (depositsOpen){
             depositsOpen = false;

@@ -49,6 +49,5 @@ def test_new_loan(accounts, usdc, factory, locker, token, borrower, backer, lend
     assert locker.totalBacked(backer) == 0 
     assert locker.totalLocked(backer) == 10000
 
-    assert False
 
     

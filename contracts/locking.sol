@@ -97,7 +97,7 @@ contract LockingContract is ReentrancyGuard {
     }
 
 
-    function redeemLocked(uint256 _lockNumber) external {
+    function redeemLocked(uint256 _lockNumber) external nonReentrant {
         require(block.timestamp >= unlockTimes[_lockNumber]);
         uint256 amount = lockAmounts[_lockNumber];
         require((totalLocked[msg.sender] - totalBacked[msg.sender]) >= amount );
@@ -107,7 +107,7 @@ contract LockingContract is ReentrancyGuard {
     }
 
 
-    function backLoan(uint256 _amount, uint256 _loanNumber, address _user) external onlyFactory {
+    function backLoan(uint256 _amount, uint256 _loanNumber, address _user) external nonReentrant onlyFactory {
         require((totalLocked[_user] - totalBacked[_user]) >= _amount );
         totalBacked[_user] += _amount;
         userBacking[_user][_loanNumber] += _amount;
@@ -115,13 +115,13 @@ contract LockingContract is ReentrancyGuard {
         nBacked[_loanNumber] += 1;
     }
 
-    function unbackLoan(uint256 _amount, uint256 _loanNumber, address _user) external onlyFactory {
+    function unbackLoan(uint256 _amount, uint256 _loanNumber, address _user) external nonReentrant onlyFactory {
         require(userBacking[_user][_loanNumber] >= _amount );
         totalBacked[_user] -= _amount;
         userBacking[_user][_loanNumber] -= _amount;
     }
 
-    function claimRevenues(uint256 _loanNumber) external {
+    function claimRevenues(uint256 _loanNumber) external nonReentrant {
         address loan = loanAddress(_loanNumber);
         uint256 amountFree = ILoan(loan).calcLockingRevenue();
         if (amountFree > 0 ){
@@ -134,7 +134,7 @@ contract LockingContract is ReentrancyGuard {
     }
 
 
-    function onDefault(uint256 _loanNumber) external onlyPool {
+    function onDefault(uint256 _loanNumber) external nonReentrant onlyPool {
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
         uint256 defaultOut = 0;
@@ -151,7 +151,7 @@ contract LockingContract is ReentrancyGuard {
 
     }
 
-    function onRepaidLoan(uint256 _loanNumber) external onlyPool {
+    function onRepaidLoan(uint256 _loanNumber) external nonReentrant onlyPool {
         // Update Backing Numbers for user ~> should reset to 0 for loan
         uint256 i = 0;
         while (i < nBacked[_loanNumber]){
