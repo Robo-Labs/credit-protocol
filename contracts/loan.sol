@@ -103,13 +103,14 @@ abstract contract Loan is ReentrancyGuard {
         uint256 i = paymentIndex;
         uint256 time = paymentDeadline[i];
         
+        
+        //TO DO FIX CALCS! 
         /*
-        TO DO FIX CALCS! 
         while ((time > timeNow) && (i < nPayments)) {
             latePayment += ((principleSchedule[i] * totalLent / maxLoan) * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
             i += 1;
         }
-        */ 
+        */
         return (interestDue + principalDue + latePayment);
     }
 
@@ -147,10 +148,12 @@ abstract contract Loan is ReentrancyGuard {
         uint256 deadline = paymentDeadline[paymentIndex];
         uint256 latePayment = 0;
 
+        /*
         // Calc Late Payments 
         if (block.timestamp > deadline){
             latePayment = (principleDue*(block.timestamp - deadline) / secondsPerYear)* latePaymentRate / decimalAdj;
         }
+        */
 
         token.transferFrom(msg.sender, address(this) , totalDue + latePayment);
         paymentIndex += 1;
@@ -166,6 +169,9 @@ abstract contract Loan is ReentrancyGuard {
                 //ILock(locker).onDefault(loanNumber);
             } else {
                 defaulted = false;
+                if (hasCollateral){
+                    IERC20(collateralToken).transfer(borrower, collateralAmt);
+                }
                 // Note this can be called externally but breaks if called by loan contract ??? 
                 //ILock(locker).onRepaidLoan(loanNumber);           
             }

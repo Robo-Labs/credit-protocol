@@ -160,9 +160,11 @@ contract LendingPool is ERC721, Loan {
         require(loanFinal);
         //require(block.timestamp >= finalPaymentTime);
         ILock(locker).onRepaidLoan(loanNumber);
+        /*
         if (hasCollateral){
-            IERC20(collateralToken).transfer(borrower, amount);
+            IERC20(collateralToken).transfer(borrower, collateralAmt);
         }
+        */
         defaulted = false;
         loanFinal = true;
     }
@@ -186,7 +188,7 @@ contract LendingPool is ERC721, Loan {
     }
 
     function calcLockingRevenue() public view returns(uint256) {
-        uint256 revenueEarned = interestEarned * revenueSharePct / decimalAdj;
+        uint256 revenueEarned = (interestEarned + latePayments) * revenueSharePct / decimalAdj;
         return (revenueEarned - revenueClaimed);
     }
 
