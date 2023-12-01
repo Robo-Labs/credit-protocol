@@ -150,12 +150,6 @@ contract PoolFactory is ReentrancyGuard {
         return(loanLookup[_loanNumber]._finderFee);
     }
 
-    /*
-    function revenueSharePct(uint256 _loanNumber) public view returns(uint256) {
-        return(loanLookup[_loanNumber]._revShare);
-    }
-    */
-
     function timeOpen(uint256 _loanNumber) public view returns(uint256) {
         return(loanLookup[_loanNumber]._timeOpen);
     }

@@ -64,9 +64,8 @@ contract LockingContract is ReentrancyGuard {
         _;
     }
 
-    // BREAK THIS FOR TESTING 
     modifier onlyPool() {
-        //require(isLoan(msg.sender));
+        require(isLoan(msg.sender));
         _;
     }
 

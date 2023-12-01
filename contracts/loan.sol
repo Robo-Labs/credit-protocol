@@ -104,13 +104,12 @@ abstract contract Loan is ReentrancyGuard {
         uint256 time = paymentDeadline[i];
         
         
-        //TO DO FIX CALCS! 
-        /*
-        while ((time > timeNow) && (i < nPayments)) {
+        while ((timeNow > time) && (i < nPayments)) {
             latePayment += ((principleSchedule[i] * totalLent / maxLoan) * ( timeNow - time ) / secondsPerYear) * latePaymentRate / decimalAdj;
             i += 1;
+            time = paymentDeadline[i];
         }
-        */
+
         return (interestDue + principalDue + latePayment);
     }
 
@@ -126,10 +125,19 @@ abstract contract Loan is ReentrancyGuard {
         principleWithdrawn += _amountFree;
     }
 
+    // If minimium amount is not reached borrower can cancel loan & lenders can withdraw 
     function cancelLoan() external nonReentrant onlyBorrower {
         require(block.timestamp >= depositDeadline);
         require(totalLent < minLoan);
 
+        loanRepaid = true; 
+        loanFinal = true;
+        defaulted = false; 
+        depositsOpen = false;
+
+        principleRepaid = totalLent;
+        interestEarned = 0;
+        latePayments = 0;
         // TO DO -> lenders can withdraw / mark loan as finalised 
         // TO DO -> unlock backing funds (min amount not reached)
     }
@@ -148,12 +156,12 @@ abstract contract Loan is ReentrancyGuard {
         uint256 deadline = paymentDeadline[paymentIndex];
         uint256 latePayment = 0;
 
-        /*
+        
         // Calc Late Payments 
         if (block.timestamp > deadline){
-            latePayment = (principleDue*(block.timestamp - deadline) / secondsPerYear)* latePaymentRate / decimalAdj;
+            latePayment = ((principleDue*totalLent / maxLoan) * (block.timestamp - deadline) / secondsPerYear)* latePaymentRate / decimalAdj;
         }
-        */
+        
 
         token.transferFrom(msg.sender, address(this) , totalDue + latePayment);
         paymentIndex += 1;

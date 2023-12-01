@@ -128,6 +128,7 @@ contract LendingPool is ERC721, Loan {
     function deposit(uint256 _amount) external nonReentrant {
         require((_amount + totalLent) <= maxLoan);
         require(depositsOpen);
+        require(block.timestamp <= depositDeadline);
 
         token.transferFrom(msg.sender, address(this), _amount);
         _mint(msg.sender, tokenId);
@@ -175,7 +176,7 @@ contract LendingPool is ERC721, Loan {
         require(ownerOf(_tokenId) == msg.sender);
         require(!claimedDefault[_tokenId]);
         uint256 _amount = amountLocked * deposits[_tokenId] / totalLent;
-        // TO DO check if already withdrawn default bonus ~ store bool if claimed or not 
+
         IERC20(ILock(locker).token()).transfer(msg.sender, _amount);
 
         if (hasCollateral){
