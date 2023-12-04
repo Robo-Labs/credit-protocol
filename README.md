@@ -1,5 +1,7 @@
 # Kashidashi Finance 
 
+![city](https://github.com/Robo-Labs/credit-protocol/assets/86513395/d0f786f2-1780-4a1a-a3c9-99fd692df10b)
+
 In the evolving landscape of Decentralized Finance (DeFi), a striking contrast is evident when compared to traditional finance (TradFi) concerning lending practices. In DeFi, the majority of loans are overcollateralized, requiring borrowers to lock in assets exceeding the loan value. This approach, while reducing risk, significantly limits accessibility and excludes potential borrowers who lack adequate collateral. Conversely, in TradFi, undercollateralized lending is the norm, allowing more flexible and inclusive credit options.Kashidashi Finance addresses this disparity by introducing a platform that facilitates undercollateralized lending in the DeFi space. This shift not only aligns DeFi more closely with TradFi's inclusivity but also opens new avenues for credit extension and financial participation. A pivotal feature of our platform is the incorporation of a secondary market dedicated to the buying and selling of rights to future cash flows from loans. This market serves a dual purpose: it allows for more efficient risk pricing of loans and provides lenders with the opportunity to liquidate their positions early if desired. By enabling these transactions, our protocol introduces a level of liquidity and flexibility to undercollateralized lending, making it a novel solution in the realm of decentralized credit.
 
 Through these innovations, our protocol aims to bridge the gap between DeFi and TradFi, offering a more inclusive, flexible, and efficient lending environment. By democratizing access to credit and enhancing liquidity options, we are poised to redefine the landscape of decentralized lending
@@ -8,14 +10,26 @@ Through these innovations, our protocol aims to bridge the gap between DeFi and 
 
 At the heart of our Kashidashi is a dynamic system designed to transform how loans are created, backed, and managed within the DeFi ecosystem. This section outlines the key mechanisms of loan creation, the role and incentives for backers, and the tokenization process that underpins the liquidity and flexibility of the system.
 
+![overview](https://github.com/Robo-Labs/credit-protocol/assets/86513395/55bdb52a-a84b-497d-811b-c237666e3dde)
+
 A) Creation of Loans
+
+![rep](https://github.com/Robo-Labs/credit-protocol/assets/86513395/8b30506c-2c13-4a4c-9ef6-d2d9dc437f21)
+
 Loans in our protocol are initiated by borrowers who propose their terms, including the loan amount, repayment schedule, interest rate, and late payment penalties. The novel aspect of our system is the backing of these loans. Unlike traditional DeFi models that rely on overcollateralization, our platform requires loans to be backed by locked tokens from our community of backers. These backers, essentially, endorse a loan by locking a portion of their tokens to guarantee it. This method not only secures the loan but also ensures that backers are judicious in their support, as their tokens are at stake. The loan is approved only if it receives the minimum required backing, creating a decentralized vetting system where backers collectively determine the viability and trustworthiness of each loan request. This process democratically shifts the decision-making power to the community, fostering a more inclusive and engaged lending environment.
 
 B) Backers' Role and Incentives
+
+![specialised](https://github.com/Robo-Labs/credit-protocol/assets/86513395/7ed277c7-4fc1-40d8-bdc0-01bcd794779f)
+
 Backers play a critical role in our ecosystem. They are not just passive token holders but active participants who assess and support loan proposals. In the event of a loan default, backers' locked tokens are slashed, aligning their interests with the successful repayment of the loan. This 'skin in the game' approach incentivizes backers to conduct due diligence, thus building a reputation system based on their backing history and success rate. In addition to the inherent responsibility, backers are also incentivized through a revenue share model. A portion of the interest paid on loans they back is distributed to them, creating a direct financial incentive. This mechanism ensures that backers are rewarded for their risk and involvement in the loan approval process, making it a potentially lucrative aspect of their participation in the platform.
 
 C) Tokenization of Loans
+
+![secondaryMarket](https://github.com/Robo-Labs/credit-protocol/assets/86513395/d987d79b-3320-45bd-92bb-ee8ecd888b9e)
+
 A key innovation of our protocol is the tokenization of loans. Once a loan is approved and funded, the rights to its future cash flows are tokenized, typically in the form of ERC721 tokens. This approach offers two significant advantages: firstly, it allows for the seamless buying and selling of these rights in a secondary market, providing liquidity and flexibility to lenders. Lenders can choose to hold onto their tokens to receive the future cash flows from the loan repayments, or they can opt to sell these tokens in the secondary market, enabling them to liquidate their positions early. Secondly, the tokenization of loans facilitates efficient risk pricing. As these tokens are traded in the market, their value reflects the perceived risk and potential return of the underlying loans, providing transparent and dynamic pricing. This market-driven approach to risk assessment further enhances the robustness and sophistication of our lending ecosystem.
+
 
 # Long-term Vision and Mechanics
 
