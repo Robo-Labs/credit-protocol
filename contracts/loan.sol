@@ -143,6 +143,44 @@ abstract contract Loan is ReentrancyGuard {
     }
 
 
+    // Allows borrower to swap collatearl out for 
+    function liquidateCollateralAndRepay(uint256 _collatOut, uint256 _amountIn, address _liquidator) external onlyBorrower {
+        if (depositsOpen){
+            depositsOpen = false;
+        }
+        uint256 _amountDue = calcTotalDue();
+        uint256 _interestDue = calcInterstDue();
+        require(_amountIn >= _amountDue);
+
+        token.transferFrom(_liquidator, address(this), _amountIn);
+        IERC20(collateralToken).transfer(_liquidator, _collatOut);
+        
+        // Calc Late Payments 
+        uint256 latePayment = _amountDue - _interestDue - (totalLent - principleRepaid);
+
+        interestEarned += _interestDue;
+        principleRepaid = totalLent; 
+        latePayments += latePayment;
+
+        loanRepaid = true;
+        loanFinal = true;        
+        paymentIndex =  nPayments;
+        if(hasDefaulted()){
+            defaulted = true;
+            
+            //ILock(locker).onDefault(loanNumber);
+        } else {
+            defaulted = false;
+            if (hasCollateral && (_collatOut < collateralAmt)){
+                IERC20(collateralToken).transfer(borrower, collateralAmt - _collatOut);
+            }        
+            if (_amountIn > _amountDue){
+                token.transfer(borrower, _amountDue - _amountIn);
+            }
+        }
+
+    }
+
     // for borrower to make next scheduled repayment  
     function repayNext() external nonReentrant {
         require(!loanRepaid);
@@ -180,7 +218,6 @@ abstract contract Loan is ReentrancyGuard {
                 if (hasCollateral){
                     IERC20(collateralToken).transfer(borrower, collateralAmt);
                 }
-                // Note this can be called externally but breaks if called by loan contract ??? 
                 //ILock(locker).onRepaidLoan(loanNumber);           
             }
         }        

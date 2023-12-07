@@ -5,6 +5,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LendingPool} from "contracts/pool.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface IChainlinkRegistry {
+    function latestAnswer(address _base, address _quote) external view returns(int256);
+}
+
 //import {ILock} from "contracts/interfaces/ILock.sol";
 
 interface ILock { 
@@ -55,13 +59,18 @@ contract PoolFactory is ReentrancyGuard {
 
     mapping(uint256 => bool) public loanApproved;
     mapping(address => bool) public isLoan;
+    mapping(uint256 => uint256) public minBackingLookup;
 
     uint256 loanCounter = 0;
-    uint256 public minBacking;
+    uint256 public minBackingMultiplier = 10000;
+    uint256 public minBackingDefault;
     // How long loan has to be approved once created
     uint256 public approvalTime = 10000;
     address public lockingContract;
     address public governance;
+
+    address public registry = 0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf;
+    bool public useOracle = false;
 
     function setLockingContract(address _locker) external nonReentrant onlyGov {
         lockingContract = _locker;
@@ -84,6 +93,14 @@ contract PoolFactory is ReentrancyGuard {
         return true;
     }
 
+    function _calcMinBacking(address _asset, uint256 _amount) internal view returns (uint256) {
+        uint256 _price;
+        _price = uint256(IChainlinkRegistry(registry).latestAnswer(_asset, address(0)));
+        require(_price > 0);
+        return (minBackingMultiplier * _amount / _price);
+
+    }
+
     function _transferCollateral(address _from, address _to, uint256 _loanNumber) internal {
         if(loanLookup[_loanNumber]._hasCollateral ){
             IERC20 collateral = IERC20(loanLookup[_loanNumber]._collateralToken);
@@ -97,6 +114,12 @@ contract PoolFactory is ReentrancyGuard {
         loanLookup[loanCounter] = _loan;
         loanDeadline[loanCounter] = block.timestamp + approvalTime;
         _transferCollateral(msg.sender, address(this), loanCounter);
+
+        if (useOracle) { 
+            minBackingLookup[loanCounter] = _calcMinBacking(loanLookup[loanCounter]._token, loanLookup[loanCounter]._maxLoan);
+        } else {
+            minBackingLookup[loanCounter] = minBackingDefault;
+        }
         loanCounter += 1;
 
     }
@@ -172,7 +195,7 @@ contract PoolFactory is ReentrancyGuard {
     }
 
     function createLoan(uint256 _loanNumber) external nonReentrant {
-        require(loanLookup[_loanNumber]._amountBacked >= minBacking);
+        require(loanLookup[_loanNumber]._amountBacked >= minBackingLookup[_loanNumber]);
         require(!loanApproved[_loanNumber]);
         require(block.timestamp <= loanDeadline[_loanNumber]);
 
