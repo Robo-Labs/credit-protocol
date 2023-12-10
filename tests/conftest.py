@@ -15,7 +15,6 @@ def loanInfo(borrower, usdc, amount):
 
 @pytest.fixture
 def loanInfoCollateral(borrower, usdc, weth, amount):
-    zeroAddress = '0x0000000000000000000000000000000000000000'
     loan = [borrower, usdc, True, weth , amount , amount/2, amount, 0, [amount/2, amount/2], [1699974055 + 604800*100, 1699974055 + 604800*200], 1000, 0 ,3600 ,500, 2 ]
     yield loan
 
